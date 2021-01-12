@@ -1,0 +1,16 @@
+Package: sdpdth
+Type: Package
+Title: M-estimator for threshold spatial dynamic panel data model
+Version: 0.1
+Date: 2021-01-12
+Author: Junyue Wu
+Maintainer: Junyue Wu <wu.junyue.p1@dc.tohoku.ac.jp>
+Description: M-estimator for threshold and non-threshold spatial dynamic panel data model.
+License: MIT + file LICENSE
+Imports: Rcpp (>= 1.0.5), rCMA, matrixcalc, rJava, Matrix
+LinkingTo: Rcpp, RcppArmadillo
+LazyData: true
+Encoding: UTF-8
+RoxygenNote: 7.1.1
+Depends: 
+    R (>= 2.10)
