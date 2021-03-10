@@ -6,12 +6,9 @@
 \alias{sdpdth-package}
 \title{sdpdth}
 \description{
-M-estimation for threshold spatial dynamic panel data model
+M-estimator for threshold and non-threshold spatial dynamic panel data model.
 }
 \author{
 Junyue Wu <wu.junyue.p1@dc.tohoku.ac.jp>
 }
-\keyword{data,}
-\keyword{dynamic}
-\keyword{panel}
-\keyword{spatial,}
+\keyword{models}

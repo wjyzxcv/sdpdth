@@ -1,56 +1,64 @@
 #' M-estimator for threshold spatial dynamic panel data model
 #' 
+#' Estimating threshold spatial dynamic panel data model with M-estimator
+#' 
 #' @import rJava
 #' @import rCMA
 #' @importFrom matrixcalc is.singular.matrix
 #' 
-#' @param y matrix, containing regional index (first column), time index (second column, numeric) and dependent variable (third column, numeric).
-#' @param x matrix, containing regional index (first column), time index (second column, numeric) and regressors (numeric).
+#' @param y matrix, containing regional index (first column), time index (second column) and dependent variable (third column).
+#' @param x matrix, containing regional index (first column), time index (second column) and regressors.
 #' @param w1 matrix, the spatial weight matrix. If w2 and w3 are supplied, the spatial weight matrix for spatial lag.
-#' @param th logical, 
-#' @param correction logical, whether to use adjusted score function. Default value is True.
+#' @param th data.frame, containing regional index (first column, numeric) and grouping indicator(second column, logical). The number of rows should be the same as the number of regions.
+#' @param correction logical, whether to use adjusted score function. Default value is TRUE.
 #' @param max_try integer, maximum attempt for the solver. Default value is 5.
-#' @param all_er logical, whether to output Hessian and Gamma matrix based se. Ignored if correction is set to False. Default value is False.
-#' @param true_range logical, whether to used the accurate stationary check. Default value is False due to performance reasons.
-#' @param residual logical, whether to output the residual. Default value is False.
+#' @param all_er logical, whether to output Hessian and Gamma matrix based se. Ignored if correction is set to FALSE. Default value is FALSE.
+#' @param true_range logical, whether to used the accurate stationary check. Default value is FALSE due to performance reasons.
+#' @param residual logical, whether to output the residual. Default value is FALSE.
 #' @param w2 matrix, the spatial weight matrix for spatio-temporal lag. Default value is the same as w1.
 #' @param w3 matrix, the spatial weight matrix for spatial error. Default value is the same as w1.
-#' @param no_tf logical, whether to account for time effect. Default value is True.
+#' @param no_tf logical, whether to account for time effect. Default value is TRUE.
 #' @param model character, indicates the model used for estimation, can be "full", "slm", "sem", "sltl". See Details.
 #' @param th_type character, "row" or "col". Indicates whether the threshold is applied to the columns or the rows of the weight matrix. Default value is "row".
 #' @param ini_val  vector msdpd object. A length 4 vector of the initial values of lambda1, lambda2, lambda3, rho or an msdpd object that contain the non-threshold estimation result. If unsupplied msdpd() will be called.
-#' @param rcpp logical, whether to use the rcpp implementation to calculate the score function. Default value is True.
-#' @param cma_pop_multi integer, multiplier for the population size used in cmaes. Default value is 1.
+#' @param rcpp logical, whether to use the rcpp implementation to calculate the score function. Default value is TRUE.
+#' @param cma_pop_multi integer, multiplier for the population size used in CMA-ES. Default value is 1.
 #' 
 #' @details Estimating threshold spatial dynamic panel data model with extended Yang(2018)'s M-estimator
 #' \deqn{y_{ti} = \mu_{i} +\alpha_t+ x_{ti}\beta_{q} +\rho_{q} y_{t-1,i} + \lambda_{1q}\sum_{j=1}^{n}w_{1,ij}y_{tj} \\ 
 #' \qquad + \lambda_{2q}\sum_{j=1}^{n}w_{2,ij}y_{t-1,i}+ u_{ti},\\
 #' u_{ti} = \lambda_{3q}\sum_{j=1}^{n}w_{3,ij}u_{tj}+ v_{ti},i=1,\ldots,n,t=1,\ldots,T, q = 1,2}
-#' Sub-models can be estimated by changing argument "model"
+#' The minimum number of time-periods is 4. Make sure the rows and columns of w1, w2, and w3 are lined up with the regional index. 
+#' Sub-models can be specified by argument "model"
 #' \itemize{
 #' \item{"full"} {Full model}
 #' \item{"slm"} {\eqn{\lambda_{2q} = \lambda_{3q} = 0}}
 #' \item{"sem"} {\eqn{\lambda_{1q} = \lambda_{2q} = 0}}
 #' \item{"sltl"} {\eqn{\lambda_{3q} = 0}}
 #' }
+#' Some suggestions when the optimizer fails: 
+#' \itemize{
+#' \item{} {Increase max_try}
+#' \item{} {Increase cma_pop_multi}
+#' \item{} {try a different submodel}
+#' }
 #' 
-#' 
-#' @return A list of estimation results
+#' @return A list of estimation results of S3 class "msdpdth"
 #' \itemize{
 #' \item{"coefficient"} {list, coefficients and standard errors}
-#' \item{"vc_mat"} {matrix , variance-covariance matrix}
-#' \item{"hes_mat"} {matrix, Hessian matrix}
-#' \item{"gamma_mat"} {matrix, Gamma matrix}
 #' \item{"model"} {character, model used for estimation}
-#' \item{"residual"} {numeric, residual}
+#' \item{"vc_mat"} {matrix, variance-covariance matrix}
+#' \item{"hes_mat"} {matrix, optional, Hessian matrix}
+#' \item{"gamma_mat"} {matrix, optional, Gamma matrix}
+#' \item{"residual"} {numeric, optional, residuals}
 #' }
 #' 
 #' @references Wu, J and Matsuda, Y. (2021). A threshold extension of spatial dynamic panel model with fixed effects. Journal of Spatial Econometrics 2,3
 #' 
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data(data_th, data_w)
-#' msdpdth(y = data_th$y, x = data_th$x, w1 = data_w, th = data_th$th)
+#' result <- msdpdth(y = data_th$y, x = data_th$x, w1 = data_w, th = data_th$th)
 #' }
 #' 
 #' @export
@@ -58,7 +66,23 @@
 #' 
 
 
-msdpdth = function(y, x, w1, th, correction = T, max_try = 5, all_er = F, true_range = F, residual = F, w3 = w1, w2 = w1, no_tf = F, model = "full", th_type = "row", ini_val = NULL, rcpp = T, cma_pop_multi = 1){
+msdpdth = function(y,
+                   x, 
+                   w1, 
+                   th, 
+                   correction = TRUE,
+                   max_try = 5, 
+                   all_er = FALSE, 
+                   true_range = FALSE, 
+                   residual = FALSE,
+                   w3 = w1, 
+                   w2 = w1, 
+                   no_tf = FALSE, 
+                   model = "full", 
+                   th_type = "row", 
+                   ini_val = NULL, 
+                   rcpp = TRUE, 
+                   cma_pop_multi = 1){
   if (!(th_type %in% c("row", "col"))) stop("invalid th_type")
   if (!correction) all_er = T
   if (is.null(ini_val)){
@@ -87,9 +111,10 @@ msdpdth = function(y, x, w1, th, correction = T, max_try = 5, all_er = F, true_r
   p = length(w1[1,])
   y = df_data(input_order(y))
   x = df_data(input_order(x))
+  th = input_order(th)[,2]
   tp = dim(y)[1]
   t = tp / p
-  if (t < 3) stop("Time period less than 3") 
+  if (t < 3) stop("Time period less than 4") 
   t1 = t-1
   tp1 = t1*p
   y_1 = as.matrix(y[-c((tp1+1):tp),-c(1,2)])

@@ -6,9 +6,9 @@
 #' @importFrom  Matrix bdiag
 #' @importFrom  Matrix forceSymmetric
 #' @useDynLib sdpdth, .registration=TRUE
-#' @description M-estimation for threshold spatial dynamic panel data model
+#' @description M-estimator for threshold and non-threshold spatial dynamic panel data model. 
 #' @author Junyue Wu <wu.junyue.p1@dc.tohoku.ac.jp>
-#' @keywords spatial, panel data, dynamic panel
+#' @keywords models
 "_PACKAGE"
 
 #' A simulated data set for testing

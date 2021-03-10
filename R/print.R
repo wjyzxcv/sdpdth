@@ -3,6 +3,13 @@
 #' @param ... other parameters
 #' @method print msdpd
 #' @details Print method for msdpd class
+#' @return A data.frame containing the coefficients and the corresponding standard error.
+#' @examples 
+#' \donttest{
+#' data(data_n, data_w)
+#' result <- msdpd(y = data_n$y, x = data_n$x, w1 = data_w)
+#' result
+#' }
 #' @export
 
 
@@ -72,6 +79,13 @@ print.msdpd = function(x, ...){
 #' @param ... other parameters
 #' @method print msdpdth
 #' @details Print method for msdpdth class
+#' @return A data.frame containing the coefficients and the corresponding standard error.
+#' @examples
+#' \donttest{
+#' data(data_th, data_w)
+#' result <- msdpdth(y = data_th$y, x = data_th$x, w1 = data_w, th = data_th$th)
+#' result
+#' }
 #' @export
 
 

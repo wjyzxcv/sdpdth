@@ -1,7 +1,9 @@
 input_order = function(mat){
   mat[,1] = factor(mat[,1])
   mat = mat[order(mat[,1]),]
-  mat = mat[order(mat[,2]),]
+  if (ncol(mat) > 2){
+    mat = mat[order(mat[,2]),]
+  }
   return(mat)
 }
 

@@ -9,45 +9,45 @@ msdpdth(
   x,
   w1,
   th,
-  correction = T,
+  correction = TRUE,
   max_try = 5,
-  all_er = F,
-  true_range = F,
-  residual = F,
+  all_er = FALSE,
+  true_range = FALSE,
+  residual = FALSE,
   w3 = w1,
   w2 = w1,
-  no_tf = F,
+  no_tf = FALSE,
   model = "full",
   th_type = "row",
   ini_val = NULL,
-  rcpp = T,
+  rcpp = TRUE,
   cma_pop_multi = 1
 )
 }
 \arguments{
-\item{y}{matrix, containing regional index (first column), time index (second column, numeric) and dependent variable (third column, numeric).}
+\item{y}{matrix, containing regional index (first column), time index (second column) and dependent variable (third column).}
 
-\item{x}{matrix, containing regional index (first column), time index (second column, numeric) and regressors (numeric).}
+\item{x}{matrix, containing regional index (first column), time index (second column) and regressors.}
 
 \item{w1}{matrix, the spatial weight matrix. If w2 and w3 are supplied, the spatial weight matrix for spatial lag.}
 
-\item{th}{logical,}
+\item{th}{data.frame, containing regional index (first column, numeric) and grouping indicator(second column, logical). The number of rows should be the same as the number of regions.}
 
-\item{correction}{logical, whether to use adjusted score function. Default value is True.}
+\item{correction}{logical, whether to use adjusted score function. Default value is TRUE.}
 
 \item{max_try}{integer, maximum attempt for the solver. Default value is 5.}
 
-\item{all_er}{logical, whether to output Hessian and Gamma matrix based se. Ignored if correction is set to False. Default value is False.}
+\item{all_er}{logical, whether to output Hessian and Gamma matrix based se. Ignored if correction is set to FALSE. Default value is FALSE.}
 
-\item{true_range}{logical, whether to used the accurate stationary check. Default value is False due to performance reasons.}
+\item{true_range}{logical, whether to used the accurate stationary check. Default value is FALSE due to performance reasons.}
 
-\item{residual}{logical, whether to output the residual. Default value is False.}
+\item{residual}{logical, whether to output the residual. Default value is FALSE.}
 
 \item{w3}{matrix, the spatial weight matrix for spatial error. Default value is the same as w1.}
 
 \item{w2}{matrix, the spatial weight matrix for spatio-temporal lag. Default value is the same as w1.}
 
-\item{no_tf}{logical, whether to account for time effect. Default value is True.}
+\item{no_tf}{logical, whether to account for time effect. Default value is TRUE.}
 
 \item{model}{character, indicates the model used for estimation, can be "full", "slm", "sem", "sltl". See Details.}
 
@@ -55,41 +55,48 @@ msdpdth(
 
 \item{ini_val}{vector msdpd object. A length 4 vector of the initial values of lambda1, lambda2, lambda3, rho or an msdpd object that contain the non-threshold estimation result. If unsupplied msdpd() will be called.}
 
-\item{rcpp}{logical, whether to use the rcpp implementation to calculate the score function. Default value is True.}
+\item{rcpp}{logical, whether to use the rcpp implementation to calculate the score function. Default value is TRUE.}
 
-\item{cma_pop_multi}{integer, multiplier for the population size used in cmaes. Default value is 1.}
+\item{cma_pop_multi}{integer, multiplier for the population size used in CMA-ES. Default value is 1.}
 }
 \value{
-A list of estimation results
+A list of estimation results of S3 class "msdpdth"
 \itemize{
 \item{"coefficient"} {list, coefficients and standard errors}
-\item{"vc_mat"} {matrix , variance-covariance matrix}
-\item{"hes_mat"} {matrix, Hessian matrix}
-\item{"gamma_mat"} {matrix, Gamma matrix}
 \item{"model"} {character, model used for estimation}
-\item{"residual"} {numeric, residual}
+\item{"vc_mat"} {matrix, variance-covariance matrix}
+\item{"hes_mat"} {matrix, optional, Hessian matrix}
+\item{"gamma_mat"} {matrix, optional, Gamma matrix}
+\item{"residual"} {numeric, optional, residuals}
 }
 }
 \description{
-M-estimator for threshold spatial dynamic panel data model
+Estimating threshold spatial dynamic panel data model with M-estimator
 }
 \details{
 Estimating threshold spatial dynamic panel data model with extended Yang(2018)'s M-estimator
 \deqn{y_{ti} = \mu_{i} +\alpha_t+ x_{ti}\beta_{q} +\rho_{q} y_{t-1,i} + \lambda_{1q}\sum_{j=1}^{n}w_{1,ij}y_{tj} \\ 
 \qquad + \lambda_{2q}\sum_{j=1}^{n}w_{2,ij}y_{t-1,i}+ u_{ti},\\
 u_{ti} = \lambda_{3q}\sum_{j=1}^{n}w_{3,ij}u_{tj}+ v_{ti},i=1,\ldots,n,t=1,\ldots,T, q = 1,2}
-Sub-models can be estimated by changing argument "model"
+The minimum number of time-periods is 4. Make sure the rows and columns of w1, w2, and w3 are lined up with the regional index. 
+Sub-models can be specified by argument "model"
 \itemize{
 \item{"full"} {Full model}
 \item{"slm"} {\eqn{\lambda_{2q} = \lambda_{3q} = 0}}
 \item{"sem"} {\eqn{\lambda_{1q} = \lambda_{2q} = 0}}
 \item{"sltl"} {\eqn{\lambda_{3q} = 0}}
 }
+Some suggestions when the optimizer fails: 
+\itemize{
+\item{} {Increase max_try}
+\item{} {Increase cma_pop_multi}
+\item{} {try a different submodel}
+}
 }
 \examples{
-\dontrun{
+\donttest{
 data(data_th, data_w)
-msdpdth(y = data_th$y, x = data_th$x, w1 = data_w, th = data_th$th)
+result <- msdpdth(y = data_th$y, x = data_th$x, w1 = data_w, th = data_th$th)
 }
 
 }

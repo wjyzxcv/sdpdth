@@ -1,5 +1,7 @@
 #' M-estimator for spatial dynamic panel data model
 #'
+#' Estimating the spatial dynamic panel data model with M-estimator
+#'
 #' @import rJava
 #' @import rCMA
 #' @importFrom matrixcalc is.singular.matrix
@@ -7,43 +9,49 @@
 #' @param y matrix, containing regional index (first column), time index (second column, numeric) and dependent variable (third column, numeric).
 #' @param x matrix, containing regional index (first column), time index (second column, numeric) and regressors (numeric).
 #' @param w1 matrix, the spatial weight matrix. If w2 and w3 are supplied, the spatial weight matrix for spatial lag.
-#' @param correction logical, whether to use adjusted score function. Default value is True.
-#' @param hessian_er logical, whether to output hessian based se. Ignored if correction is set to False. Default value is False.
-#' @param true_range logical, whether to used the accurate stationary check. Default value is False due to performance reasons.
+#' @param correction logical, whether to use adjusted score function. Default value is TRUE.
+#' @param hessian_er logical, whether to output hessian based se. Ignored if correction is set to False. Default value is FALSE.
+#' @param true_range logical, whether to used the accurate stationary check. Default value is FALSE due to performance reasons.
 #' @param max_try integer, maximum attempt for the solver. Default value is 5.
 #' @param w2 matrix, the spatial weight matrix for spatio-temporal lag. Default value is the same as w1.
 #' @param w3 matrix, the spatial weight matrix for spatial error. Default value is the same as w1.
-#' @param no_tf logical, whether to account for time effect. Default value is True.
+#' @param no_tf logical, whether to account for time effect. Default value is TRUE.
 #' @param model character, indicates the model used for estimation, can be "full", "slm", "sem", "sltl". See Details.
-#' @param rcpp logical, whether to use the rcpp implementation to calculate the score function. Default value is True.
-#' @param cma_pop_multi integer, multiplier for the population size used in cmaes. Default value is 1.
+#' @param rcpp logical, whether to use the rcpp implementation to calculate the score function. Default value is TRUE.
+#' @param cma_pop_multi integer, multiplier for the population size used in CMA-ES. Default value is 1.
 #' 
 #' @details Estimating the spatial dynamic panel data model with Yang(2018)'s M-estimator
 #' \deqn{	y_{ti} = \mu_{i}+\alpha_t + x_{ti}\beta + \rho y_{t-1,i} + \lambda_1 \sum_{j =1}^{n}w_{1,ij}y_{tj} + \lambda_2 \sum_{j =1}^{n}w_{2,ij}y_{t-1,j} +  u_{ti},\\ 
 #' u_{ti} = \lambda_3\sum_{j =1}^{n}w_{3,ij}u_{tj} + v_{ti}, i=1,\ldots,n,t=1,\ldots,T}
-#' Sub-models can be estimated by changing argument "model"
+#' The minimum number of time-periods is 4. Make sure the rows and columns of w1, w2, and w3 are lined up with the regional index. 
+#' Sub-models can be specified by argument "model"
 #' \itemize{
 #' \item{"full"} {Full model}
 #' \item{"slm"} {\eqn{\lambda_2 = \lambda_3 = 0}}
 #' \item{"sem"} {\eqn{\lambda_1 = \lambda_2 = 0}}
 #' \item{"sltl"} {\eqn{\lambda_3 = 0}}
 #' }
+#' Some suggestions when the optimizer fails: 
+#' \itemize{
+#' \item{} {Increase max_try}
+#' \item{} {Increase cma_pop_multi}
+#' \item{} {try a different submodel}
+#' }
 #' 
-#' 
-#' @return A list of estimation results
+#' @return A list of estimation results of S3 class "msdpd"
 #' \itemize{
 #' \item{"coefficient"} {list, coefficients and standard errors}
-#' \item{"vc_mat"} {matrix, variance-covariance matrix}
-#' \item{"hessian"} {matrix, hessian matrix}
 #' \item{"model"} {character, model used for estimation}
+#' \item{"vc_mat"} {matrix, variance-covariance matrix}
+#' \item{"hessian"} {matrix, optional, hessian matrix}
 #' }
 #' 
 #' @references Yang, Z. (2018). Unified M-estimation of fixed-effects spatial dynamic models with short panels. Journal of Econometrics, 205(2), 423-447.
 #' 
 #' @examples 
-#' \dontrun{
+#' \donttest{
 #' data(data_n, data_w)
-#' msdpd(y = data_n$y, x = data_n$x, w1 = data_w)
+#' result <- msdpd(y = data_n$y, x = data_n$x, w1 = data_w)
 #' }
 #' 
 #' 
@@ -51,13 +59,25 @@
 #' 
 #' 
 
-msdpd = function(y, x, w1, correction = T, hessian_er = F, true_range = F, max_try = 5, w2 = w1, w3 = w1, no_tf = F, model = "full", rcpp = T, cma_pop_multi = 1){
+msdpd = function(y,
+                 x, 
+                 w1, 
+                 correction = TRUE,
+                 hessian_er = FALSE,
+                 true_range = FALSE, 
+                 max_try = 5, 
+                 w2 = w1, 
+                 w3 = w1, 
+                 no_tf = FALSE,
+                 model = "full", 
+                 rcpp = TRUE, 
+                 cma_pop_multi = 1){
   p = length(w1[1,])
   y = df_data(input_order(y))
   x = df_data(input_order(x))
   tp = dim(y)[1]
   t = tp / p
-  if (t < 3) stop("Time period less than 3") 
+  if (t < 3) stop("Time period less than 4") 
   t1 = t-1
   tp1 = t1*p
   y_1 = as.matrix(y[-c((tp1+1):tp),-c(1,2)])

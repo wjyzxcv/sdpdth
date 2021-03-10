@@ -11,9 +11,19 @@
 
 \item{...}{other parameters}
 }
+\value{
+A data.frame containing the coefficients and the corresponding standard error.
+}
 \description{
 Print method for msdpd class
 }
 \details{
 Print method for msdpd class
+}
+\examples{
+\donttest{
+data(data_n, data_w)
+result <- msdpd(y = data_n$y, x = data_n$x, w1 = data_w)
+result
+}
 }
