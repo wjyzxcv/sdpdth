@@ -8,7 +8,12 @@
 }
 \arguments{
 \item{x}{msdpdth class}
+
+\item{...}{other parameters}
 }
 \description{
+Print method for msdpdth class
+}
+\details{
 Print method for msdpdth class
 }

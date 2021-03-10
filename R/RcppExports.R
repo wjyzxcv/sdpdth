@@ -5,7 +5,7 @@ msdpd_aqs <- function(para, x_, y, y1, w, inv_c, correction, w_lam, w_er) {
     .Call(`_sdpdth_msdpd_aqs`, para, x_, y, y1, w, inv_c, correction, w_lam, w_er)
 }
 
-msdpdth_aqs <- function(para, x_, y, y1, w, w_lam, w_er, th_e, inv_c, correction) {
-    .Call(`_sdpdth_msdpdth_aqs`, para, x_, y, y1, w, w_lam, w_er, th_e, inv_c, correction)
+msdpdth_aqs <- function(para, x_, y, y1, w, w_lam, w_er, th_e, inv_c, correction, th_type) {
+    .Call(`_sdpdth_msdpdth_aqs`, para, x_, y, y1, w, w_lam, w_er, th_e, inv_c, correction, th_type)
 }
 

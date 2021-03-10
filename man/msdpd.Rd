@@ -72,8 +72,11 @@ Sub-models can be estimated by changing argument "model"
 }
 }
 \examples{
+\dontrun{
 data(data_n, data_w)
 msdpd(y = data_n$y, x = data_n$x, w1 = data_w)
+}
+
 
 }
 \references{

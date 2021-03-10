@@ -104,15 +104,16 @@ Rcpp::RObject msdpd_aqs(const arma::vec& para,
 
 // [[Rcpp::export]]
 Rcpp::RObject msdpdth_aqs(const arma::vec& para, 
-                           const arma::mat& x_,
-                           const arma::vec& y,
-                           const arma::vec& y1, 
-                           const arma::mat& w, 
-                           const arma::mat& w_lam,
-                           const arma::mat& w_er,
-                           const arma::vec& th_e, 
-                           const arma::mat& inv_c, 
-                           const bool& correction){
+                          const arma::mat& x_,
+                          const arma::vec& y,
+                          const arma::vec& y1, 
+                          const arma::mat& w, 
+                          const arma::mat& w_lam,
+                          const arma::mat& w_er,
+                          const arma::vec& th_e, 
+                          const arma::mat& inv_c, 
+                          const bool& correction,
+                          const int& th_type){
   const int tp = y.n_elem;
   const int p = w.n_cols;
   const int t = tp/p;
@@ -148,28 +149,46 @@ Rcpp::RObject msdpdth_aqs(const arma::vec& para,
   y_q2.elem(th_e1).fill(0);
   y1_q1.elem(th_e2).fill(0);
   y1_q2.elem(th_e1).fill(0);
-  bdw0_q1.rows(th_e2).fill(0);
-  bdw0_q2.rows(th_e1).fill(0);
-  bdw_q1.rows(th_e2).fill(0);
-  bdw_q2.rows(th_e1).fill(0);
-  // bdw_er_q1.rows(th_e2).fill(0);
-  // bdw_er_q2.rows(th_e1).fill(0);
-  bdw_lam_q1.rows(th_e2).fill(0);
-  bdw_lam_q2.rows(th_e1).fill(0);
-  w_q1.rows(th_2).fill(0);
-  w_q2.rows(th_1).fill(0);
-  w_er_q1.rows(th_2).fill(0);
-  w_er_q2.rows(th_1).fill(0);
-  // w_lam_q1.rows(th_2).fill(0);
-  // w_lam_q2.rows(th_1).fill(0);
-  const mat iaws = diag_p - merge_vec(alp1, alp2, th_2, p)*w_er;
+  mat iaws, irws, lws;
+  switch(th_type){
+  case 1: {
+    w_q1.rows(th_2).fill(0);
+    w_q2.rows(th_1).fill(0);
+    w_er_q1.rows(th_2).fill(0);
+    w_er_q2.rows(th_1).fill(0);
+    bdw0_q1.rows(th_e2).fill(0);
+    bdw0_q2.rows(th_e1).fill(0);
+    bdw_q1.rows(th_e2).fill(0);
+    bdw_q2.rows(th_e1).fill(0);
+    bdw_lam_q1.rows(th_e2).fill(0);
+    bdw_lam_q2.rows(th_e1).fill(0);
+    iaws = diag_p - merge_vec(alp1, alp2, th_2, p)*w_er;
+    irws = diag_p - merge_vec(rho1, rho2, th_2, p)*w;
+    lws = merge_vec(lam1, lam2, th_2, p)*w_lam;
+    break;
+  }
+  case 2: {
+    w_q1.cols(th_2).fill(0);
+    w_q2.cols(th_1).fill(0);
+    w_er_q1.cols(th_2).fill(0);
+    w_er_q2.cols(th_1).fill(0);
+    bdw0_q1.cols(th_e2).fill(0);
+    bdw0_q2.cols(th_e1).fill(0);
+    bdw_q1.cols(th_e2).fill(0);
+    bdw_q2.cols(th_e1).fill(0);
+    bdw_lam_q1.cols(th_e2).fill(0);
+    bdw_lam_q2.cols(th_e1).fill(0);
+    iaws = diag_p - w_er*merge_vec(alp1, alp2, th_2, p);
+    irws = diag_p - w*merge_vec(rho1, rho2, th_2, p);
+    lws = w_lam*merge_vec(lam1, lam2, th_2, p);
+    break;
+  }
+  }
   const mat iaw = kron(diag_t, iaws);
   const mat iiaws = iaws.i();
   const mat iaaw = kron(inv_c, iaws.t()*iaws);
-  const mat irws = diag_p - merge_vec(rho1, rho2, th_2, p)*w;
   const mat irw = kron(diag_t, irws);
   const mat iirws = irws.i();
-  const mat lws = merge_vec(lam1, lam2, th_2, p)*w_lam;
   const mat lw = kron(diag_t, lws);
   const mat dthetas = merge_vec(theta1, theta2, th_2, p);
   const mat dtheta = kron(diag_t, dthetas);
