@@ -18,6 +18,8 @@ msdpdth(
   w2 = w1,
   no_tf = F,
   model = "full",
+  th_type = "row",
+  ini_val = NULL,
   rcpp = T,
   cma_pop_multi = 1
 )
@@ -48,6 +50,10 @@ msdpdth(
 \item{no_tf}{logical, whether to account for time effect. Default value is True.}
 
 \item{model}{character, indicates the model used for estimation, can be "full", "slm", "sem", "sltl". See Details.}
+
+\item{th_type}{character, "row" or "col". Indicates whether the threshold is applied to the columns or the rows of the weight matrix. Default value is "row".}
+
+\item{ini_val}{vector msdpd object. A length 4 vector of the initial values of lambda1, lambda2, lambda3, rho or an msdpd object that contain the non-threshold estimation result. If unsupplied msdpd() will be called.}
 
 \item{rcpp}{logical, whether to use the rcpp implementation to calculate the score function. Default value is True.}
 
@@ -81,10 +87,12 @@ Sub-models can be estimated by changing argument "model"
 }
 }
 \examples{
+\dontrun{
 data(data_th, data_w)
 msdpdth(y = data_th$y, x = data_th$x, w1 = data_w, th = data_th$th)
+}
 
 }
 \references{
-Yang, Z. (2018). Unified M-estimation of fixed-effects spatial dynamic models with short panels. Journal of Econometrics, 205(2), 423-447.
+Wu, J and Matsuda, Y. (2021). A threshold extension of spatial dynamic panel model with fixed effects. Journal of Spatial Econometrics 2,3
 }

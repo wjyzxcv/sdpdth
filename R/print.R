@@ -1,6 +1,8 @@
 #' Print method for msdpd class
 #' @param x msdpd class
+#' @param ... other parameters
 #' @method print msdpd
+#' @details Print method for msdpd class
 #' @export
 
 
@@ -67,7 +69,9 @@ print.msdpd = function(x, ...){
 
 #' Print method for msdpdth class
 #' @param x msdpdth class
+#' @param ... other parameters
 #' @method print msdpdth
+#' @details Print method for msdpdth class
 #' @export
 
 

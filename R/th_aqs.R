@@ -1,5 +1,6 @@
-th_full_aqs = function(para, x_, y, y1, w, th, correction, mode = "normal", all_er = F, w_er, w_lam, inv_c){
+th_full_aqs = function(para, x_, y, y1, w, th, correction, mode = "normal", all_er = F, w_er, w_lam, inv_c, th_type = "row"){
   x = x_
+  xt = t(x)
   tp = length(y)
   p = dim(w)[1]
   t = tp/p
@@ -33,31 +34,53 @@ th_full_aqs = function(para, x_, y, y1, w, th, correction, mode = "normal", all_
   y_q2[th_e] = 0
   y1_q1[!th_e] = 0
   y1_q2[th_e] = 0
-  bdw0_q1[!th_e,] = 0
-  bdw0_q2[th_e,] = 0
-  bdw_q1[!th_e,] = 0
-  bdw_q2[th_e,] = 0
-  bdw_er_q1[!th_e,] = 0
-  bdw_er_q2[th_e,] = 0
-  bdw_lam_q1[!th_e,] = 0
-  bdw_lam_q2[th_e,] = 0
-  w_q1[!th,] = 0
-  w_q2[th,] = 0
-  w_er_q1[!th,] = 0
-  w_er_q2[th,] = 0
-  w_lam_q1[!th,] = 0
-  w_lam_q2[th,] = 0
-  xt = t(x)
-  iaws = diag(p) - merge_th_diag(alp1, alp2, th) %*% w_er
+  switch(th_type,
+         "row" = {
+           bdw0_q1[!th_e,] = 0
+           bdw0_q2[th_e,] = 0
+           bdw_q1[!th_e,] = 0
+           bdw_q2[th_e,] = 0
+           bdw_er_q1[!th_e,] = 0
+           bdw_er_q2[th_e,] = 0
+           bdw_lam_q1[!th_e,] = 0
+           bdw_lam_q2[th_e,] = 0
+           w_q1[!th,] = 0
+           w_q2[th,] = 0
+           w_er_q1[!th,] = 0
+           w_er_q2[th,] = 0
+           w_lam_q1[!th,] = 0
+           w_lam_q2[th,] = 0
+           iaws = diag(p) - merge_th_diag(alp1, alp2, th) %*% w_er
+           irws = diag(p) - merge_th_diag(rho1, rho2, th) %*% w
+           lws = merge_th_diag(lam1, lam2, th) %*% w_lam
+         },
+         "col" = {
+           bdw0_q1[,!th_e] = 0
+           bdw0_q2[,th_e] = 0
+           bdw_q1[,!th_e] = 0
+           bdw_q2[,th_e] = 0
+           bdw_er_q1[,!th_e] = 0
+           bdw_er_q2[,th_e] = 0
+           bdw_lam_q1[,!th_e] = 0
+           bdw_lam_q2[,th_e] = 0
+           w_q1[,!th] = 0
+           w_q2[,th] = 0
+           w_er_q1[,!th] = 0
+           w_er_q2[,th] = 0
+           w_lam_q1[,!th] = 0
+           w_lam_q2[,th] = 0
+           iaws = diag(p) - w_er %*% merge_th_diag(alp1, alp2, th)
+           irws = diag(p) - w %*% merge_th_diag(rho1, rho2, th)
+           lws = w_lam %*% merge_th_diag(lam1, lam2, th)
+         },
+         stop("invalid th_type"))
   iiaws = solve(iaws)
   iaw = kronecker(diag(t), iaws)
   iiaw = kronecker(diag(t), iiaws)
   iaaw = kronecker(inv_c, t(iaws) %*% iaws)
-  irws = diag(p) - merge_th_diag(rho1, rho2, th) %*% w
   iirws = solve(irws)
   irw = kronecker(diag(t), irws)
   iirw = kronecker(diag(t), iirws)
-  lws = merge_th_diag(lam1, lam2, th) %*% w_lam
   lw =  kronecker(diag(t), lws)
   dthetas = merge_th_diag(theta1, theta2, th)
   dtheta = kronecker(diag(t), dthetas)
@@ -351,7 +374,7 @@ th_full_aqs = function(para, x_, y, y1, w, th, correction, mode = "normal", all_
          stop("undefined mode"))
 }
 
-th_slm_aqs = function(para, x_, y, y1, w, th, correction, mode = "normal", all_er = F, inv_c){
+th_slm_aqs = function(para, x_, y, y1, w, th, correction, mode = "normal", all_er = F, inv_c, th_type = "row"){
   x = x_
   tp = length(y)
   p = dim(w)[1]
@@ -376,19 +399,32 @@ th_slm_aqs = function(para, x_, y, y1, w, th, correction, mode = "normal", all_e
   y_q2[th_e] = 0
   y1_q1[!th_e] = 0
   y1_q2[th_e] = 0
-  bdw_q1[!th_e,] = 0
-  bdw_q2[th_e,] = 0
-  bdw0_q1[!th_e,] = 0
-  bdw0_q2[th_e,] = 0
-  w_q1[!th,] = 0
-  w_q2[th,] = 0
+  switch(th_type,
+         "row" = {
+           bdw0_q1[!th_e,] = 0
+           bdw0_q2[th_e,] = 0
+           bdw_q1[!th_e,] = 0
+           bdw_q2[th_e,] = 0
+           w_q1[!th,] = 0
+           w_q2[th,] = 0
+           irws = diag(p) - merge_th_diag(rho1, rho2, th) %*% w
+         },
+         "col" = {
+           bdw0_q1[,!th_e] = 0
+           bdw0_q2[,th_e] = 0
+           bdw_q1[,!th_e] = 0
+           bdw_q2[,th_e] = 0
+           w_q1[,!th] = 0
+           w_q2[,th] = 0
+           irws = diag(p) - w %*% merge_th_diag(rho1, rho2, th)
+         },
+         stop("invalid th_type"))
   xt = t(x)
   iaws = diag(p)
   iiaws = diag(p)
   iaw = diag(p*t)
   iiaw = diag(p*t)
   iaaw = bdinv_c
-  irws = diag(p) - merge_th_diag(rho1, rho2, th) %*% w
   iirws = solve(irws)
   irw = kronecker(diag(t), irws)
   iirw = kronecker(diag(t), iirws)
@@ -594,7 +630,7 @@ th_slm_aqs = function(para, x_, y, y1, w, th, correction, mode = "normal", all_e
          stop("undefined mode"))
 }
 
-th_sem_aqs = function(para, x_, y, y1, w_er, th, correction, mode = "normal", all_er = F, inv_c){
+th_sem_aqs = function(para, x_, y, y1, w_er, th, correction, mode = "normal", all_er = F, inv_c, th_type = "row"){
   x = x_
   tp = length(y)
   p = dim(w_er)[1]
@@ -620,14 +656,28 @@ th_sem_aqs = function(para, x_, y, y1, w_er, th, correction, mode = "normal", al
   y_q2[th_e] = 0
   y1_q1[!th_e] = 0
   y1_q2[th_e] = 0
-  bdw0_q1[!th_e,] = 0
-  bdw0_q2[th_e,] = 0
-  bdw_er_q1[!th_e,] = 0
-  bdw_er_q2[th_e,] = 0
-  w_er_q1[!th,] = 0
+  switch(th_type,
+         "row" = {
+           bdw0_q1[!th_e,] = 0
+           bdw0_q2[th_e,] = 0
+           bdw_er_q1[!th_e,] = 0
+           bdw_er_q2[th_e,] = 0
+           w_er_q1[!th,] = 0
+           w_er_q2[th,] = 0
+           iaws = diag(p) - merge_th_diag(alp1, alp2, th) %*% w_er
+         },
+         "col" = {
+           bdw0_q1[,!th_e] = 0
+           bdw0_q2[,th_e] = 0
+           bdw_er_q1[,!th_e] = 0
+           bdw_er_q2[,th_e] = 0
+           w_er_q1[,!th] = 0
+           w_er_q2[,th] = 0
+           iaws = diag(p) - w_er %*% merge_th_diag(alp1, alp2, th)
+         },
+         stop("invalid th_type"))
   w_er_q2[th,] = 0
   xt = t(x)
-  iaws = diag(p) - merge_th_diag(alp1, alp2, th) %*% w_er
   iiaws = solve(iaws)
   iaw = kronecker(diag(t), iaws)
   iiaw = kronecker(diag(t), iiaws)
@@ -819,7 +869,7 @@ th_sem_aqs = function(para, x_, y, y1, w_er, th, correction, mode = "normal", al
          stop("undefined mode"))
 }
 
-th_sltl_aqs = function(para, x_, y, y1, w, w_lam, th, correction, mode = "normal", all_er = F, inv_c){
+th_sltl_aqs = function(para, x_, y, y1, w, w_lam, th, correction, mode = "normal", all_er = F, inv_c, th_type = "row"){
   x = x_
   tp = length(y)
   p = dim(w)[1]
@@ -849,16 +899,36 @@ th_sltl_aqs = function(para, x_, y, y1, w, w_lam, th, correction, mode = "normal
   y_q2[th_e] = 0
   y1_q1[!th_e] = 0
   y1_q2[th_e] = 0
-  bdw0_q1[!th_e,] = 0
-  bdw0_q2[th_e,] = 0
-  bdw_q1[!th_e,] = 0
-  bdw_q2[th_e,] = 0
-  bdw_lam_q1[!th_e,] = 0
-  bdw_lam_q2[th_e,] = 0
-  w_q1[!th,] = 0
-  w_q2[th,] = 0
-  w_lam_q1[!th,] = 0
-  w_lam_q2[th,] = 0
+  switch(th_type,
+         "row" = {
+           bdw0_q1[!th_e,] = 0
+           bdw0_q2[th_e,] = 0
+           bdw_q1[!th_e,] = 0
+           bdw_q2[th_e,] = 0
+           bdw_lam_q1[!th_e,] = 0
+           bdw_lam_q2[th_e,] = 0
+           w_q1[!th,] = 0
+           w_q2[th,] = 0
+           w_lam_q1[!th,] = 0
+           w_lam_q2[th,] = 0
+           irws = diag(p) - merge_th_diag(rho1, rho2, th) %*% w
+           lws = merge_th_diag(lam1, lam2, th) %*% w_lam
+         },
+         "col" = {
+           bdw0_q1[,!th_e] = 0
+           bdw0_q2[,th_e] = 0
+           bdw_q1[,!th_e] = 0
+           bdw_q2[,th_e] = 0
+           bdw_lam_q1[,!th_e] = 0
+           bdw_lam_q2[,th_e] = 0
+           w_q1[,!th] = 0
+           w_q2[,th] = 0
+           w_lam_q1[,!th] = 0
+           w_lam_q2[,th] = 0
+           irws = diag(p) - w %*% merge_th_diag(rho1, rho2, th)
+           lws = w_lam %*% merge_th_diag(lam1, lam2, th)
+         },
+         stop("invalid th_type"))
   xt = t(x)
   iaws = diag(p)
   iiaws = diag(p)

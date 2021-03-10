@@ -41,8 +41,11 @@
 #' @references Yang, Z. (2018). Unified M-estimation of fixed-effects spatial dynamic models with short panels. Journal of Econometrics, 205(2), 423-447.
 #' 
 #' @examples 
+#' \dontrun{
 #' data(data_n, data_w)
 #' msdpd(y = data_n$y, x = data_n$x, w1 = data_w)
+#' }
+#' 
 #' 
 #' @export
 #' 
@@ -87,7 +90,7 @@ msdpd = function(y, x, w1, correction = T, hessian_er = F, true_range = F, max_t
         return(T)
       }
     }
-    const_rcma = function(x) {const_rcma_r(para = x, w = w1, w_er = w3, w_lam = w2, alp_lbound = alp_lbound)}
+    const_rcma = function(para) {const_rcma_r(para = para, w = w1, w_er = w3, w_lam = w2, alp_lbound = alp_lbound)}
   } else {
     const_rcma = function(para){
       rho = para[1]
