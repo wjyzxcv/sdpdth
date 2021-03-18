@@ -22,8 +22,8 @@ Print method for msdpd class
 }
 \examples{
 \donttest{
-data(data_n, data_w)
-result <- msdpd(y = data_n$y, x = data_n$x, w1 = data_w)
+data(data_n, data_nw)
+result <- msdpd(y = data_n$y, x = data_n$x, w1 = data_nw)
 result
 }
 }

@@ -19,3 +19,6 @@
 
 #' A simulated data set for testing
 "data_w"
+
+#' A simulated data set for testing
+"data_nw"
