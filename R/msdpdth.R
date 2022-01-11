@@ -10,9 +10,8 @@
 #' @param x matrix, containing regional index (first column), time index (second column) and regressors.
 #' @param w1 matrix, the spatial weight matrix. If w2 and w3 are supplied, the spatial weight matrix for spatial lag.
 #' @param th data.frame, containing regional index (first column, numeric) and grouping indicator(second column, logical). The number of rows should be the same as the number of regions.
-#' @param correction logical, whether to use adjusted score function. Default value is TRUE.
 #' @param max_try integer, maximum attempt for the solver. Default value is 5.
-#' @param all_er logical, whether to output Hessian and Gamma matrix based se. Ignored if correction is set to FALSE. Default value is FALSE.
+#' @param all_er logical, whether to output Hessian and Gamma matrix based se. Default value is FALSE.
 #' @param true_range logical, whether to used the accurate stationary check. Default value is FALSE due to performance reasons.
 #' @param residual logical, whether to output the residual. Default value is FALSE.
 #' @param w2 matrix, the spatial weight matrix for spatio-temporal lag. Default value is the same as w1.
@@ -70,7 +69,6 @@ msdpdth = function(y,
                    x, 
                    w1, 
                    th, 
-                   correction = TRUE,
                    max_try = 5, 
                    all_er = FALSE, 
                    true_range = FALSE, 
@@ -84,11 +82,10 @@ msdpdth = function(y,
                    rcpp = TRUE, 
                    cma_pop_multi = 1){
   if (!(th_type %in% c("row", "col"))) stop("invalid th_type")
-  if (!correction) all_er = T
   if (is.null(ini_val)){
     #fit non-threshold model for initial value
     for (i in 1:max_try){
-      nth_res = msdpd(y = y, x = x, w1 = w1, correction = correction, true_range = true_range, max_try = max_try, w3 = w3, w2 = w2, no_tf = no_tf, model = model, rcpp = rcpp, cma_pop_multi = cma_pop_multi)
+      nth_res = msdpd(y = y, x = x, w1 = w1, true_range = true_range, max_try = max_try, w3 = w3, w2 = w2, no_tf = no_tf, model = model, rcpp = rcpp, cma_pop_multi = cma_pop_multi)
       if (nth_res$solve) break
       if (i == max_try) message("Failed to solve non-threshold model")
     }
@@ -198,9 +195,9 @@ msdpdth = function(y,
               }
               if(rcpp){
                 int_th_type = as.integer(ifelse(th_type == "row", 1, 2))
-                objfun_rcma = function(par) {msdpdth_aqs(para = par, y = y, x_ = x_mt, w = w1, th_e = rep(th, t1)+0, y1 = y_1, inv_c = inv_c, correction = correction, w_er = w3, w_lam = w2, th_type = int_th_type)}
+                objfun_rcma = function(par) {msdpdth_aqs(para = par, y = y, x_ = x_mt, w = w1, th_e = rep(th, t1)+0, y1 = y_1, inv_c = inv_c, w_er = w3, w_lam = w2, th_type = int_th_type)}
               }else{
-                objfun_rcma = function(par) {th_full_aqs(para = par, y = y, x_ = x_mt, w = w1, th = th, y1 = y_1, inv_c = inv_c, correction = correction, w_er = w3, w_lam = w2, th_type = th_type)}
+                objfun_rcma = function(par) {th_full_aqs(para = par, y = y, x_ = x_mt, w = w1, th = th, y1 = y_1, inv_c = inv_c, w_er = w3, w_lam = w2, th_type = th_type)}
               }
               for (i in 1:max_try){
                 cma_obj = cmaNew()
@@ -221,45 +218,43 @@ msdpdth = function(y,
                                       lambda3_2 = optim_par[6],
                                       rho_2 = optim_par[7],
                                       lambda2_2 = optim_par[8])
-            output$coefficient = c(output$coefficient, th_full_aqs(para = optim_par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "beta_sigs",  w_er = w3, w_lam = w2, inv_c = inv_c, th_type = th_type))
+            output$coefficient = c(output$coefficient, th_full_aqs(para = optim_par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "beta_sigs",  w_er = w3, w_lam = w2, inv_c = inv_c, th_type = th_type))
             output$coefficient$beta = output$coefficient$beta[1:k_o]
             if (all_er){
-              all_se = th_full_aqs(para = optim_par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "opmd",  all_er = all_er,  w_er = w3, w_lam = w2, inv_c = inv_c, th_type = th_type)
-              if (correction){
-                vc_er = sqrt(diag(all_se$vc_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda1_1_se"]] = vc_er[k+3]
-                output$coefficient[["lambda3_1_se"]] = vc_er[k+5]
-                output$coefficient[["rho_1_se"]] = vc_er[k+2]
-                output$coefficient[["lambda2_1_se"]] = vc_er[k+4]
-                output$coefficient[["lambda1_2_se"]] = vc_er[k+7]
-                output$coefficient[["lambda3_2_se"]] = vc_er[k+9]
-                output$coefficient[["rho_2_se"]] = vc_er[k+6]
-                output$coefficient[["lambda2_2_se"]] = vc_er[k+8]
-                if (no_tf){
-                  output[["vc_mat"]] = all_se$vc_mat
-                } else {
-                  output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                }
-                gamma_er = sqrt(diag(all_se$gamma_mat))
-                output$coefficient[["beta_se_gamma"]] = gamma_er[1:k_o]
-                output$coefficient[["sigma2_se_gamma"]] = gamma_er[k+1]
-                output$coefficient[["lambda1_1_se_gamma"]] = gamma_er[k+3]
-                output$coefficient[["lambda3_1_se_gamma"]] = gamma_er[k+5]
-                output$coefficient[["rho_1_se_gamma"]] = gamma_er[k+2]
-                output$coefficient[["lambda2_1_se_gamma"]] = gamma_er[k+4]
-                output$coefficient[["lambda1_2_se_gamma"]] = gamma_er[k+7]
-                output$coefficient[["lambda3_2_se_gamma"]] = gamma_er[k+9]
-                output$coefficient[["rho_2_se_gamma"]] = gamma_er[k+6]
-                output$coefficient[["lambda2_2_se_gamma"]] = gamma_er[k+8]
-                if (no_tf){
-                  output[["gamma_mat"]] = all_se$gamma_mat
-                } else {
-                  output[["gamma_mat"]] = all_se$gamma_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                }
+              all_se = th_full_aqs(para = optim_par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "opmd",  all_er = all_er,  w_er = w3, w_lam = w2, inv_c = inv_c, th_type = th_type)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda1_1_se"]] = vc_er[k+3]
+              output$coefficient[["lambda3_1_se"]] = vc_er[k+5]
+              output$coefficient[["rho_1_se"]] = vc_er[k+2]
+              output$coefficient[["lambda2_1_se"]] = vc_er[k+4]
+              output$coefficient[["lambda1_2_se"]] = vc_er[k+7]
+              output$coefficient[["lambda3_2_se"]] = vc_er[k+9]
+              output$coefficient[["rho_2_se"]] = vc_er[k+6]
+              output$coefficient[["lambda2_2_se"]] = vc_er[k+8]
+              if (no_tf){
+                output[["vc_mat"]] = all_se$vc_mat
+              } else {
+                output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
-              hes_er = sqrt(diag(all_se$hes_mat))
+              gamma_er = sqrt(diag(all_se$gamma_mat))
+              output$coefficient[["beta_se_gamma"]] = gamma_er[1:k_o]
+              output$coefficient[["sigma2_se_gamma"]] = gamma_er[k+1]
+              output$coefficient[["lambda1_1_se_gamma"]] = gamma_er[k+3]
+              output$coefficient[["lambda3_1_se_gamma"]] = gamma_er[k+5]
+              output$coefficient[["rho_1_se_gamma"]] = gamma_er[k+2]
+              output$coefficient[["lambda2_1_se_gamma"]] = gamma_er[k+4]
+              output$coefficient[["lambda1_2_se_gamma"]] = gamma_er[k+7]
+              output$coefficient[["lambda3_2_se_gamma"]] = gamma_er[k+9]
+              output$coefficient[["rho_2_se_gamma"]] = gamma_er[k+6]
+              output$coefficient[["lambda2_2_se_gamma"]] = gamma_er[k+8]
+              if (no_tf){
+                output[["gamma_mat"]] = all_se$gamma_mat
+              } else {
+                output[["gamma_mat"]] = all_se$gamma_mat[-c((k_o+1):k), -c((k_o+1):k)]
+              }
+              hes_er = sqrt(diag(solve(-all_se$hes_mat)))
               output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
               output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
               output$coefficient[["lambda1_1_se_hes"]] = hes_er[k+3]
@@ -276,7 +271,7 @@ msdpdth = function(y,
                 output[["hes_mat"]] = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
             }else{
-              all_se = th_full_aqs(para = optim_par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "opmd",  all_er = all_er,  w_er = w3, w_lam = w2, inv_c = inv_c, th_type = th_type)
+              all_se = th_full_aqs(para = optim_par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "opmd",  all_er = all_er,  w_er = w3, w_lam = w2, inv_c = inv_c, th_type = th_type)
               vc_er = sqrt(diag(all_se$vc_mat))
               output$coefficient[["beta_se"]] = vc_er[1:k_o]
               output$coefficient[["sigma2_se"]] = vc_er[k+1]
@@ -294,7 +289,7 @@ msdpdth = function(y,
                 output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
             }
-            if (residual) output$coefficient[["residuals"]] = th_full_aqs(para = optim_par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th,correction = correction, mode = "residual",  all_er = all_er, w_er = w3, w_lam = w2, inv_c = inv_c, th_type = th_type)
+            if (residual) output$coefficient[["residuals"]] = th_full_aqs(para = optim_par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "residual",  all_er = all_er, w_er = w3, w_lam = w2, inv_c = inv_c, th_type = th_type)
           },
           "slm" = {
             init_value = rep(c(nth_res$coefficient$lambda1, nth_res$coefficient$rho), 2)
@@ -306,10 +301,10 @@ msdpdth = function(y,
                 pars[3] = par[2]
                 pars[5] = par[3]
                 pars[7] = par[4]
-                msdpdth_aqs(para = pars, y = y, x_ = x_mt, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, w_er = matrix(0,p,p), w_lam =  matrix(0,p,p), th_e = rep(th, t1)+0, th_type = int_th_type)
+                msdpdth_aqs(para = pars, y = y, x_ = x_mt, w = w1, y1 = y_1, inv_c = inv_c, w_er = matrix(0,p,p), w_lam =  matrix(0,p,p), th_e = rep(th, t1)+0, th_type = int_th_type)
               }
             }else{
-              objfun_rcma = function(par) {th_slm_aqs(para = par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, inv_c = inv_c, th_type = th_type)}
+              objfun_rcma = function(par) {th_slm_aqs(para = par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, inv_c = inv_c, th_type = th_type)}
             }
             const_rcma_slm = function(x){
               pars = numeric(8)
@@ -333,38 +328,36 @@ msdpdth = function(y,
                                       lambda1_2 = optim_res$bestX[3],
                                       rho_2 = optim_res$bestX[4]
             )
-            output$coefficient = c(output$coefficient, th_slm_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "beta_sigs", inv_c = inv_c, th_type = th_type))
+            output$coefficient = c(output$coefficient, th_slm_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "beta_sigs", inv_c = inv_c, th_type = th_type))
             output$coefficient$beta = output$coefficient$beta[1:k_o]
             
             if (all_er){
-              all_se = th_slm_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "opmd",  all_er = all_er, inv_c = inv_c, th_type = th_type)
-              if (correction){
-                vc_er = sqrt(diag(all_se$vc_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda1_1_se"]] = vc_er[k+3]
-                output$coefficient[["rho_1_se"]] = vc_er[k+2]
-                output$coefficient[["lambda1_2_se"]] = vc_er[k+5]
-                output$coefficient[["rho_2_se"]] = vc_er[k+4]
-                if (no_tf){
-                  output[["vc_mat"]] = all_se$vc_mat
-                } else {
-                  output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                }
-                gamma_er = sqrt(diag(all_se$gamma_mat))
-                output$coefficient[["beta_se_gamma"]] = gamma_er[1:k_o]
-                output$coefficient[["sigma2_se_gamma"]] = gamma_er[k+1]
-                output$coefficient[["lambda1_1_se_gamma"]] = gamma_er[k+3]
-                output$coefficient[["rho_1_se_gamma"]] = gamma_er[k+2]
-                output$coefficient[["lambda1_2_se_gamma"]] = gamma_er[k+5]
-                output$coefficient[["rho_2_se_gamma"]] = gamma_er[k+4]
-                if (no_tf){
-                  output[["gamma_mat"]] = all_se$gamma_mat
-                } else {
-                  output[["gamma_mat"]] = all_se$gamma_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                }
+              all_se = th_slm_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "opmd",  all_er = all_er, inv_c = inv_c, th_type = th_type)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda1_1_se"]] = vc_er[k+3]
+              output$coefficient[["rho_1_se"]] = vc_er[k+2]
+              output$coefficient[["lambda1_2_se"]] = vc_er[k+5]
+              output$coefficient[["rho_2_se"]] = vc_er[k+4]
+              if (no_tf){
+                output[["vc_mat"]] = all_se$vc_mat
+              } else {
+                output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
-              hes_er = sqrt(diag(all_se$hes_mat))
+              gamma_er = sqrt(diag(all_se$gamma_mat))
+              output$coefficient[["beta_se_gamma"]] = gamma_er[1:k_o]
+              output$coefficient[["sigma2_se_gamma"]] = gamma_er[k+1]
+              output$coefficient[["lambda1_1_se_gamma"]] = gamma_er[k+3]
+              output$coefficient[["rho_1_se_gamma"]] = gamma_er[k+2]
+              output$coefficient[["lambda1_2_se_gamma"]] = gamma_er[k+5]
+              output$coefficient[["rho_2_se_gamma"]] = gamma_er[k+4]
+              if (no_tf){
+                output[["gamma_mat"]] = all_se$gamma_mat
+              } else {
+                output[["gamma_mat"]] = all_se$gamma_mat[-c((k_o+1):k), -c((k_o+1):k)]
+              }
+              hes_er = sqrt(diag(solve(-all_se$hes_mat)))
               output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
               output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
               output$coefficient[["lambda1_1_se_hes"]] = hes_er[k+3]
@@ -377,7 +370,7 @@ msdpdth = function(y,
                 output[["hes_mat"]] = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
             }else{
-              all_se = th_slm_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "opmd",  all_er = all_er, inv_c = inv_c, th_type = th_type)
+              all_se = th_slm_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "opmd",  all_er = all_er, inv_c = inv_c, th_type = th_type)
               vc_er = sqrt(diag(all_se$vc_mat))
               output$coefficient[["beta_se"]] = vc_er[1:k_o]
               output$coefficient[["sigma2_se"]] = vc_er[k+1]
@@ -391,7 +384,7 @@ msdpdth = function(y,
                 output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
             }
-            if (residual) output$coefficient[["residuals"]] = th_slm_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "residual",  all_er = all_er, inv_c = inv_c, th_type = th_type)
+            if (residual) output$coefficient[["residuals"]] = th_slm_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "residual",  all_er = all_er, inv_c = inv_c, th_type = th_type)
           },
           "sem" = {
             init_value = rep(c(nth_res$coefficient$lambda3, nth_res$coefficient$rho), 2)
@@ -403,10 +396,10 @@ msdpdth = function(y,
                 pars[3] = par[2]
                 pars[6] = par[3]
                 pars[7] = par[4]
-                msdpdth_aqs(para = pars, y = y, x_ = x_mt, y1 = y_1, inv_c = inv_c, correction = correction, w = matrix(0,p,p), w_er = w3, w_lam = matrix(0,p,p), th_e = rep(th, t1)+0, th_type = int_th_type)
+                msdpdth_aqs(para = pars, y = y, x_ = x_mt, y1 = y_1, inv_c = inv_c, w = matrix(0,p,p), w_er = w3, w_lam = matrix(0,p,p), th_e = rep(th, t1)+0, th_type = int_th_type)
               }
             }else{
-              objfun_rcma = function(par) {th_sem_aqs(para = par, y = y, x_ = x_mt, y1 = y_1, th = th, inv_c = inv_c, correction = correction, w_er = w3, th_type = th_type)}
+              objfun_rcma = function(par) {th_sem_aqs(para = par, y = y, x_ = x_mt, y1 = y_1, th = th, inv_c = inv_c, w_er = w3, th_type = th_type)}
             }
             const_rcma_sem = function(x){
               pars = numeric(8)
@@ -429,37 +422,35 @@ msdpdth = function(y,
                                       rho_1 = optim_res$bestX[2],
                                       lambda3_2 = optim_res$bestX[3],
                                       rho_2 = optim_res$bestX[4])
-            output$coefficient = c(output$coefficient, th_sem_aqs(para = optim_res$bestX, y = y, x_ = x_mt, y1 = y_1, th = th, correction = correction, mode = "beta_sigs", w_er = w3, inv_c = inv_c, th_type = th_type))
+            output$coefficient = c(output$coefficient, th_sem_aqs(para = optim_res$bestX, y = y, x_ = x_mt, y1 = y_1, th = th, mode = "beta_sigs", w_er = w3, inv_c = inv_c, th_type = th_type))
             output$coefficient$beta = output$coefficient$beta[1:k_o]
             if (all_er){
-              all_se = th_sem_aqs(para = optim_res$bestX, y = y, x_ = x_mt, y1 = y_1, th = th,  correction = correction, mode = "opmd",  all_er = all_er, w_er = w3, inv_c = inv_c, th_type = th_type)
-              if (correction){
-                vc_er = sqrt(diag(all_se$vc_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda3_1_se"]] = vc_er[k+3]
-                output$coefficient[["rho_1_se"]] = vc_er[k+2]
-                output$coefficient[["lambda3_2_se"]] = vc_er[k+5]
-                output$coefficient[["rho_2_se"]] = vc_er[k+4]
-                if (no_tf){
-                  output[["vc_mat"]] = all_se$vc_mat
-                } else {
-                  output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                }
-                gamma_er = sqrt(diag(all_se$gamma_mat))
-                output$coefficient[["beta_se_gamma"]] = gamma_er[1:k_o]
-                output$coefficient[["sigma2_se_gamma"]] = gamma_er[k+1]
-                output$coefficient[["lambda3_1_se_gamma"]] = gamma_er[k+3]
-                output$coefficient[["rho_1_se_gamma"]] = gamma_er[k+2]
-                output$coefficient[["lambda3_2_se_gamma"]] = gamma_er[k+5]
-                output$coefficient[["rho_2_se_gamma"]] = gamma_er[k+4]
-                if (no_tf){
-                  output[["gamma_mat"]] = all_se$gamma_mat
-                } else {
-                  output[["gamma_mat"]] = all_se$gamma_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                }
+              all_se = th_sem_aqs(para = optim_res$bestX, y = y, x_ = x_mt, y1 = y_1, th = th, mode = "opmd",  all_er = all_er, w_er = w3, inv_c = inv_c, th_type = th_type)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda3_1_se"]] = vc_er[k+3]
+              output$coefficient[["rho_1_se"]] = vc_er[k+2]
+              output$coefficient[["lambda3_2_se"]] = vc_er[k+5]
+              output$coefficient[["rho_2_se"]] = vc_er[k+4]
+              if (no_tf){
+                output[["vc_mat"]] = all_se$vc_mat
+              } else {
+                output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
-              hes_er = sqrt(diag(all_se$hes_mat))
+              gamma_er = sqrt(diag(all_se$gamma_mat))
+              output$coefficient[["beta_se_gamma"]] = gamma_er[1:k_o]
+              output$coefficient[["sigma2_se_gamma"]] = gamma_er[k+1]
+              output$coefficient[["lambda3_1_se_gamma"]] = gamma_er[k+3]
+              output$coefficient[["rho_1_se_gamma"]] = gamma_er[k+2]
+              output$coefficient[["lambda3_2_se_gamma"]] = gamma_er[k+5]
+              output$coefficient[["rho_2_se_gamma"]] = gamma_er[k+4]
+              if (no_tf){
+                output[["gamma_mat"]] = all_se$gamma_mat
+              } else {
+                output[["gamma_mat"]] = all_se$gamma_mat[-c((k_o+1):k), -c((k_o+1):k)]
+              }
+              hes_er = sqrt(diag(solve(-all_se$hes_mat)))
               output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
               output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
               output$coefficient[["lambda3_1_se_hes"]] = hes_er[k+3]
@@ -472,7 +463,7 @@ msdpdth = function(y,
                 output[["hes_mat"]] = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
             }else{
-              all_se = th_sem_aqs(para = optim_res$bestX, y = y, x_ = x_mt, y1 = y_1, th = th, correction = correction, mode = "opmd",  all_er = all_er, w_er = w3, inv_c = inv_c, th_type = th_type)
+              all_se = th_sem_aqs(para = optim_res$bestX, y = y, x_ = x_mt, y1 = y_1, th = th, mode = "opmd",  all_er = all_er, w_er = w3, inv_c = inv_c, th_type = th_type)
               vc_er = sqrt(diag(all_se$vc_mat))
               output$coefficient[["beta_se"]] = vc_er[1:k_o]
               output$coefficient[["sigma2_se"]] = vc_er[k+1]
@@ -486,7 +477,7 @@ msdpdth = function(y,
                 output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
             }
-            if (residual) output$coefficient[["residuals"]] = th_sem_aqs(para = optim_res$bestX, y = y, x_ = x_mt, y1 = y_1, th = th, correction = correction, mode = "residual",  all_er = all_er, w_er = w3, inv_c = inv_c, th_type = th_type)
+            if (residual) output$coefficient[["residuals"]] = th_sem_aqs(para = optim_res$bestX, y = y, x_ = x_mt, y1 = y_1, th = th, mode = "residual",  all_er = all_er, w_er = w3, inv_c = inv_c, th_type = th_type)
           },
           "sltl" = {
             init_value = rep(c(nth_res$coefficient$lambda1, nth_res$coefficient$rho, nth_res$coefficient$lambda2), 2)
@@ -500,10 +491,10 @@ msdpdth = function(y,
                 pars[5] = par[4]
                 pars[7] = par[5]
                 pars[8] = par[6]
-                msdpdth_aqs(para = pars, y = y, x_ = x_mt, w = w1, y1 = y_1, th_e = rep(th, t1)+0, inv_c = inv_c, correction = correction, w_er = matrix(0, p, p), w_lam = w2, th_type = int_th_type)
+                msdpdth_aqs(para = pars, y = y, x_ = x_mt, w = w1, y1 = y_1, th_e = rep(th, t1)+0, inv_c = inv_c, w_er = matrix(0, p, p), w_lam = w2, th_type = int_th_type)
               }
             }else{
-              objfun_rcma = function(par) {th_sltl_aqs(para = par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, inv_c = inv_c, correction = correction, w_lam = w2, th_type = th_type)}
+              objfun_rcma = function(par) {th_sltl_aqs(para = par, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, inv_c = inv_c, w_lam = w2, th_type = th_type)}
             }
             const_rcma_sltl = function(x){
               pars = numeric(8)
@@ -530,41 +521,39 @@ msdpdth = function(y,
                                       lambda1_2 = optim_res$bestX[4],
                                       rho_2 = optim_res$bestX[5],
                                       lambda2_2 = optim_res$bestX[6])
-            output$coefficient = c(output$coefficient, th_sltl_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "beta_sigs", w_lam = w2, inv_c = inv_c, th_type = th_type))
+            output$coefficient = c(output$coefficient, th_sltl_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "beta_sigs", w_lam = w2, inv_c = inv_c, th_type = th_type))
             output$coefficient$beta = output$coefficient$beta[1:k_o]
             if (all_er){
-              all_se = th_sltl_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "opmd",  all_er = all_er, w_lam = w2, inv_c = inv_c, th_type = th_type)
-              if (correction){
-                vc_er = sqrt(diag(all_se$vc_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda1_1_se"]] = vc_er[k+3]
-                output$coefficient[["rho_1_se"]] = vc_er[k+2]
-                output$coefficient[["lambda2_1_se"]] = vc_er[k+4]
-                output$coefficient[["lambda1_2_se"]] = vc_er[k+6]
-                output$coefficient[["rho_2_se"]] = vc_er[k+5]
-                output$coefficient[["lambda2_2_se"]] = vc_er[k+7]
-                if (no_tf){
-                  output[["vc_mat"]] = all_se$vc_mat
-                } else {
-                  output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                }
-                gamma_er = sqrt(diag(all_se$gamma_er_mat))
-                output$coefficient[["beta_se_gamma"]] = gamma_er[1:k_o]
-                output$coefficient[["sigma2_se_gamma"]] = gamma_er[k+1]
-                output$coefficient[["lambda1_1_se_gamma"]] = gamma_er[k+3]
-                output$coefficient[["rho_1_se_gamma"]] = gamma_er[k+2]
-                output$coefficient[["lambda2_1_se_gamma"]] = gamma_er[k+4]
-                output$coefficient[["lambda1_2_se_gamma"]] = gamma_er[k+6]
-                output$coefficient[["rho_2_se_gamma"]] = gamma_er[k+5]
-                output$coefficient[["lambda2_2_se_gamma"]] = gamma_er[k+7]
-                if (no_tf){
-                  output[["gamma_mat"]] = all_se$gamma_mat
-                } else {
-                  output[["gamma_mat"]] = all_se$gamma_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                }
+              all_se = th_sltl_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "opmd",  all_er = all_er, w_lam = w2, inv_c = inv_c, th_type = th_type)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda1_1_se"]] = vc_er[k+3]
+              output$coefficient[["rho_1_se"]] = vc_er[k+2]
+              output$coefficient[["lambda2_1_se"]] = vc_er[k+4]
+              output$coefficient[["lambda1_2_se"]] = vc_er[k+6]
+              output$coefficient[["rho_2_se"]] = vc_er[k+5]
+              output$coefficient[["lambda2_2_se"]] = vc_er[k+7]
+              if (no_tf){
+                output[["vc_mat"]] = all_se$vc_mat
+              } else {
+                output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
-              hes_er = sqrt(diag(all_se$hes_mat))
+              gamma_er = sqrt(diag(all_se$gamma_er_mat))
+              output$coefficient[["beta_se_gamma"]] = gamma_er[1:k_o]
+              output$coefficient[["sigma2_se_gamma"]] = gamma_er[k+1]
+              output$coefficient[["lambda1_1_se_gamma"]] = gamma_er[k+3]
+              output$coefficient[["rho_1_se_gamma"]] = gamma_er[k+2]
+              output$coefficient[["lambda2_1_se_gamma"]] = gamma_er[k+4]
+              output$coefficient[["lambda1_2_se_gamma"]] = gamma_er[k+6]
+              output$coefficient[["rho_2_se_gamma"]] = gamma_er[k+5]
+              output$coefficient[["lambda2_2_se_gamma"]] = gamma_er[k+7]
+              if (no_tf){
+                output[["gamma_mat"]] = all_se$gamma_mat
+              } else {
+                output[["gamma_mat"]] = all_se$gamma_mat[-c((k_o+1):k), -c((k_o+1):k)]
+              }
+              hes_er = sqrt(diag(solve(-all_se$hes_mat)))
               output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
               output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
               output$coefficient[["lambda1_1_se_hes"]] = hes_er[k+3]
@@ -579,7 +568,7 @@ msdpdth = function(y,
                 output[["hes_mat"]] = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
             }else{
-              all_se = th_sltl_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "opmd",  all_er = all_er, w_lam = w2, inv_c = inv_c, th_type = th_type)
+              all_se = th_sltl_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "opmd",  all_er = all_er, w_lam = w2, inv_c = inv_c, th_type = th_type)
               vc_er = sqrt(diag(all_se$vc_mat))
               output$coefficient[["beta_se"]] = vc_er[1:k_o]
               output$coefficient[["sigma2_se"]] = vc_er[k+1]
@@ -595,7 +584,7 @@ msdpdth = function(y,
                 output[["vc_mat"]] = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               }
             }
-            if (residual) output$residual = th_sltl_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, correction = correction, mode = "residual",  all_er = all_er, w_lam = w2, inv_c = inv_c, th_type = th_type)
+            if (residual) output$residual = th_sltl_aqs(para = optim_res$bestX, y = y, x_ = x_mt, w = w1, y1 = y_1, th = th, mode = "residual",  all_er = all_er, w_lam = w2, inv_c = inv_c, th_type = th_type)
           },
           stop("Undefined model")
   )

@@ -1,4 +1,4 @@
-full_aqs = function(para, x_, y, y1, w, w_er, w_lam, inv_c, correction, mode = "normal", hessian_er = F){
+full_aqs = function(para, x_, y, y1, w, w_er, w_lam, inv_c, mode = "normal", hessian_er = F){
   x = x_
   k = dim(x)[2]
   tp = length(y)
@@ -31,23 +31,15 @@ full_aqs = function(para, x_, y, y1, w, w_er, w_lam, inv_c, correction, mode = "
   switch(mode,
          "normal" = {
            tmp_mat_1 = t(k_ast) %*% iaaw
-           if (correction){
-             #aqs
-             A_mats = make_A_df(p, t, diag(theta, p, p), lws, iirws)
-             vec_bias_theta = diag(bdinv_c %*% A_mats$A_1 %*% iirw)
-             vec_bias_rho = diag(bdinv_c %*% A_mats$A %*% iirw %*% bdw)
-             vec_bias_lam = diag(bdinv_c %*% A_mats$A_1 %*% iirw %*% bdw_lam)
-             eq[1] = 1/sigs * tmp_mat_1 %*% y1 + sum(vec_bias_theta)
-             eq[2] = 1/sigs * tmp_mat_1 %*% bdw %*% y + sum(vec_bias_rho)
-             eq[3] = 1/sigs * tmp_mat_1 %*% bdw_lam %*% y1 + sum(vec_bias_lam)
-             eq[4] = 0.5/sigs * t(k_ast) %*% kronecker(inv_c, t(w_er) %*% iaws + t(iaws) %*% w_er) %*% k_ast - t * sum(diag(w_er %*% iiaws))
-           } else {
-             #qs
-             eq[1] = 1/sigs * tmp_mat_1 %*% y1
-             eq[2] = 1/sigs * tmp_mat_1 %*% bdw %*% y - t * sum(diag(iirws %*% w))
-             eq[3] = 1/sigs * tmp_mat_1 %*% bdw_lam %*% y1
-             eq[4] = 0.5/sigs * t(k_ast) %*% kronecker(inv_c, t(w_er) %*% iaws + t(iaws) %*% w_er) %*% k_ast - t * sum(diag(w_er %*% iiaws))
-           }
+           #aqs
+           A_mats = make_A_df(p, t, diag(theta, p, p), lws, iirws)
+           vec_bias_theta = diag(bdinv_c %*% A_mats$A_1 %*% iirw)
+           vec_bias_rho = diag(bdinv_c %*% A_mats$A %*% iirw %*% bdw)
+           vec_bias_lam = diag(bdinv_c %*% A_mats$A_1 %*% iirw %*% bdw_lam)
+           eq[1] = 1/sigs * tmp_mat_1 %*% y1 + sum(vec_bias_theta)
+           eq[2] = 1/sigs * tmp_mat_1 %*% bdw %*% y + sum(vec_bias_rho)
+           eq[3] = 1/sigs * tmp_mat_1 %*% bdw_lam %*% y1 + sum(vec_bias_lam)
+           eq[4] = 0.5/sigs * t(k_ast) %*% kronecker(inv_c, t(w_er) %*% iaws + t(iaws) %*% w_er) %*% k_ast - t * sum(diag(w_er %*% iiaws))
            return(sum(eq^2))
          },
          "beta_sigs" = {
@@ -159,7 +151,7 @@ full_aqs = function(para, x_, y, y1, w, w_er, w_lam, inv_c, correction, mode = "
            gamma_mat = all_g%*%t(all_g)
            if (hessian_er){
              return_list = list(vc_mat = inv_sig_mat%*%gamma_mat%*%inv_sig_mat,
-                                hes_mat = inv_sig_mat)
+                                hes_mat = sec_deri)
              return(return_list)
            } else {
              vc_mat = inv_sig_mat%*%gamma_mat%*%inv_sig_mat
@@ -169,7 +161,7 @@ full_aqs = function(para, x_, y, y1, w, w_er, w_lam, inv_c, correction, mode = "
          stop("undefined mode"))
 }
 
-slm_aqs = function(para, x_, y, y1, w, inv_c, correction, mode = "normal", hessian_er = F){
+slm_aqs = function(para, x_, y, y1, w, inv_c, mode = "normal", hessian_er = F){
   x = x_
   k = dim(x)[2]
   tp = length(y)
@@ -192,18 +184,12 @@ slm_aqs = function(para, x_, y, y1, w, inv_c, correction, mode = "normal", hessi
   switch(mode,
          "normal" = {
            tmp_mat_1 = t(k_ast) %*% iaaw
-           if (correction){
-             #aqs
-             A_mats = make_A_df(p, t, diag(theta, p, p), 0, iirws)
-             vec_bias_theta = diag(bdinv_c %*% A_mats$A_1 %*% iirw)
-             vec_bias_rho = diag(bdinv_c %*% A_mats$A %*% iirw %*% bdw)
-             eq[1] = 1/sigs * tmp_mat_1 %*% y1 + sum(vec_bias_theta)
-             eq[2] = 1/sigs * tmp_mat_1 %*% bdw %*% y + sum(vec_bias_rho)
-           } else {
-             #qs
-             eq[1] = 1/sigs * tmp_mat_1 %*% y1
-             eq[2] = 1/sigs * tmp_mat_1 %*% bdw %*% y - t * sum(diag(iirws %*% w))
-           }
+           #aqs
+           A_mats = make_A_df(p, t, diag(theta, p, p), 0, iirws)
+           vec_bias_theta = diag(bdinv_c %*% A_mats$A_1 %*% iirw)
+           vec_bias_rho = diag(bdinv_c %*% A_mats$A %*% iirw %*% bdw)
+           eq[1] = 1/sigs * tmp_mat_1 %*% y1 + sum(vec_bias_theta)
+           eq[2] = 1/sigs * tmp_mat_1 %*% bdw %*% y + sum(vec_bias_rho)
            return(sum(eq^2))
          },
          "beta_sigs" = {
@@ -276,7 +262,7 @@ slm_aqs = function(para, x_, y, y1, w, inv_c, correction, mode = "normal", hessi
            gamma_mat = all_g%*%t(all_g)
            if (hessian_er){
              return_list = list(vc_mat = inv_sig_mat%*%gamma_mat%*%inv_sig_mat,
-                                hes_mat = inv_sig_mat)
+                                hes_mat = sec_deri)
              return(return_list)
            } else {
              vc_mat = inv_sig_mat%*%gamma_mat%*%inv_sig_mat
@@ -286,7 +272,7 @@ slm_aqs = function(para, x_, y, y1, w, inv_c, correction, mode = "normal", hessi
          stop("undefined mode"))
 }
 
-sem_aqs = function(para, x_, y, y1, w_er, inv_c, correction, mode = "normal", hessian_er = F){
+sem_aqs = function(para, x_, y, y1, w_er, inv_c, mode = "normal", hessian_er = F){
   x = x_
   k = dim(x)[2]
   tp = length(y)
@@ -309,17 +295,11 @@ sem_aqs = function(para, x_, y, y1, w_er, inv_c, correction, mode = "normal", he
   switch(mode,
          "normal" = {
            tmp_mat_1 = t(k_ast) %*% iaaw
-           if (correction){
-             #aqs
-             A_mats = make_A_df(p, t, diag(theta, p, p), 0, diag(p))
-             vec_bias_theta = diag(bdinv_c %*% A_mats$A_1)
-             eq[1] = 1/sigs * tmp_mat_1 %*% y1 + sum(vec_bias_theta)
-             eq[2] = 0.5/sigs * t(k_ast) %*% kronecker(inv_c, t(w_er) %*% iaws + t(iaws) %*% w_er) %*% k_ast - t * sum(diag(w_er %*% iiaws))
-           } else {
-             #qs
-             eq[1] = 1/sigs * tmp_mat_1 %*% y1
-             eq[2] = 0.5/sigs * t(k_ast) %*% kronecker(inv_c, t(w_er) %*% iaws + t(iaws) %*% w_er) %*% k_ast - t * sum(diag(w_er %*% iiaws))
-           }
+           #aqs
+           A_mats = make_A_df(p, t, diag(theta, p, p), 0, diag(p))
+           vec_bias_theta = diag(bdinv_c %*% A_mats$A_1)
+           eq[1] = 1/sigs * tmp_mat_1 %*% y1 + sum(vec_bias_theta)
+           eq[2] = 0.5/sigs * t(k_ast) %*% kronecker(inv_c, t(w_er) %*% iaws + t(iaws) %*% w_er) %*% k_ast - t * sum(diag(w_er %*% iiaws))
            return(sum(eq^2))
          },
          "beta_sigs" = {
@@ -388,7 +368,7 @@ sem_aqs = function(para, x_, y, y1, w_er, inv_c, correction, mode = "normal", he
            gamma_mat = all_g%*%t(all_g)
            if (hessian_er){
              return_list = list(vc_mat = inv_sig_mat%*%gamma_mat%*%inv_sig_mat,
-                                hes_mat = inv_sig_mat)
+                                hes_mat = sec_deri)
              return(return_list)
            } else {
              vc_mat = inv_sig_mat%*%gamma_mat%*%inv_sig_mat
@@ -398,7 +378,7 @@ sem_aqs = function(para, x_, y, y1, w_er, inv_c, correction, mode = "normal", he
          stop("undefined mode"))
 }
 
-sltl_aqs = function(para, x_, y, y1, w, w_lam, inv_c, correction, mode = "normal", hessian_er = F){
+sltl_aqs = function(para, x_, y, y1, w, w_lam, inv_c, mode = "normal", hessian_er = F){
   x = x_
   k = dim(x)[2]
   tp = length(y)
@@ -425,21 +405,14 @@ sltl_aqs = function(para, x_, y, y1, w, w_lam, inv_c, correction, mode = "normal
   switch(mode,
          "normal" = {
            tmp_mat_1 = t(k_ast) %*% iaaw
-           if (correction){
-             #aqs
-             A_mats = make_A_df(p, t, diag(theta, p, p), lws, iirws)
-             vec_bias_theta = diag(bdinv_c %*% A_mats$A_1 %*% iirw)
-             vec_bias_rho = diag(bdinv_c %*% A_mats$A %*% iirw %*% bdw)
-             vec_bias_lam = diag(bdinv_c %*% A_mats$A_1 %*% iirw %*% bdw_lam)
-             eq[1] = 1/sigs * tmp_mat_1 %*% y1 + sum(vec_bias_theta)
-             eq[2] = 1/sigs * tmp_mat_1 %*% bdw %*% y + sum(vec_bias_rho)
-             eq[3] = 1/sigs * tmp_mat_1 %*% bdw_lam %*% y1 + sum(vec_bias_lam)
-           } else {
-             #qs
-             eq[1] = 1/sigs * tmp_mat_1 %*% y1
-             eq[2] = 1/sigs * tmp_mat_1 %*% bdw %*% y - t * sum(diag(iirws %*% w))
-             eq[3] = 1/sigs * tmp_mat_1 %*% bdw_lam %*% y1
-           }
+           #aqs
+           A_mats = make_A_df(p, t, diag(theta, p, p), lws, iirws)
+           vec_bias_theta = diag(bdinv_c %*% A_mats$A_1 %*% iirw)
+           vec_bias_rho = diag(bdinv_c %*% A_mats$A %*% iirw %*% bdw)
+           vec_bias_lam = diag(bdinv_c %*% A_mats$A_1 %*% iirw %*% bdw_lam)
+           eq[1] = 1/sigs * tmp_mat_1 %*% y1 + sum(vec_bias_theta)
+           eq[2] = 1/sigs * tmp_mat_1 %*% bdw %*% y + sum(vec_bias_rho)
+           eq[3] = 1/sigs * tmp_mat_1 %*% bdw_lam %*% y1 + sum(vec_bias_lam)
            return(sum(eq^2))
          },
          "beta_sigs" = {
@@ -528,7 +501,7 @@ sltl_aqs = function(para, x_, y, y1, w, w_lam, inv_c, correction, mode = "normal
            gamma_mat = all_g%*%t(all_g)
            if (hessian_er){
              return_list = list(vc_mat = inv_sig_mat%*%gamma_mat%*%inv_sig_mat,
-                                hes_mat = inv_sig_mat)
+                                hes_mat = sec_deri)
              return(return_list)
            } else {
              vc_mat = inv_sig_mat%*%gamma_mat%*%inv_sig_mat

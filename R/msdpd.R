@@ -9,8 +9,7 @@
 #' @param y matrix, containing regional index (first column), time index (second column, numeric) and dependent variable (third column, numeric).
 #' @param x matrix, containing regional index (first column), time index (second column, numeric) and regressors (numeric).
 #' @param w1 matrix, the spatial weight matrix. If w2 and w3 are supplied, the spatial weight matrix for spatial lag.
-#' @param correction logical, whether to use adjusted score function. Default value is TRUE.
-#' @param hessian_er logical, whether to output hessian based se. Ignored if correction is set to False. Default value is FALSE.
+#' @param hessian_er logical, whether to output hessian based se. Default value is FALSE.
 #' @param true_range logical, whether to used the accurate stationary check. Default value is FALSE due to performance reasons.
 #' @param max_try integer, maximum attempt for the solver. Default value is 5.
 #' @param w2 matrix, the spatial weight matrix for spatio-temporal lag. Default value is the same as w1.
@@ -61,7 +60,6 @@
 msdpd = function(y,
                  x, 
                  w1, 
-                 correction = TRUE,
                  hessian_er = FALSE,
                  true_range = FALSE, 
                  max_try = 5, 
@@ -126,9 +124,9 @@ msdpd = function(y,
   switch (model,
           "full" = {
             if(rcpp){
-              objfun_rcma = function(par) {msdpd_aqs(para = par, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, w_er = w3, w_lam = w2)}
+              objfun_rcma = function(par) {msdpd_aqs(para = par, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, w_er = w3, w_lam = w2)}
             }else{
-              objfun_rcma = function(par) {full_aqs(para = par, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, w_er = w3, w_lam = w2)}
+              objfun_rcma = function(par) {full_aqs(para = par, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, w_er = w3, w_lam = w2)}
             }
             for (i in 1:max_try){
               cma_obj = cmaNew()
@@ -143,48 +141,36 @@ msdpd = function(y,
                                       rho = optim_res$bestX[3],
                                       lambda2 = optim_res$bestX[4]
             )
-            output$coefficient = c(output$coefficient, full_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "beta_sigs", w_er = w3, w_lam = w2))
+            output$coefficient = c(output$coefficient, full_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, mode = "beta_sigs", w_er = w3, w_lam = w2))
             output$coefficient$beta = output$coefficient$beta[1:k_o]
-            if (correction){
-              if (hessian_er){
-                all_se = full_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = hessian_er, w_er = w3, w_lam = w2)
-                vc_er = sqrt(diag(all_se$vc_mat))
-                hes_er = sqrt(diag(all_se$hes_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda1_se"]] = vc_er[k+3]
-                output$coefficient[["lambda3_se"]] = vc_er[k+5]
-                output$coefficient[["rho_se"]] = vc_er[k+2]
-                output$coefficient[["lambda2_se"]] = vc_er[k+4]
-                output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
-                output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
-                output$coefficient[["lambda1_se_hes"]] = hes_er[k+3]
-                output$coefficient[["lambda3_se_hes"]] = hes_er[k+5]
-                output$coefficient[["rho_se_hes"]] = hes_er[k+2]
-                output$coefficient[["lambda2_se_hes"]] = hes_er[k+4]
-                output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                output$hessian = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
-              }else{
-                all_se = full_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = hessian_er, w_er = w3, w_lam = w2)
-                vc_er = sqrt(diag(all_se$vc_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda1_se"]] = vc_er[k+3]
-                output$coefficient[["lambda3_se"]] = vc_er[k+5]
-                output$coefficient[["rho_se"]] = vc_er[k+2]
-                output$coefficient[["lambda2_se"]] = vc_er[k+4]
-                output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-              }
-            } else {
-              all_se = full_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = T, w_er = w3, w_lam = w2)
-              hes_er = sqrt(diag(all_se$hes_mat))
-              output$coefficient[["beta_se"]] = hes_er[1:k_o]
-              output$coefficient[["sigma2_se"]] = hes_er[k+1]
-              output$coefficient[["lambda1_se"]] = hes_er[k+3]
-              output$coefficient[["lambda3_se"]] = hes_er[k+5]
-              output$coefficient[["rho_se"]] = hes_er[k+2]
-              output$coefficient[["lambda2_se"]] = hes_er[k+4]
+            if (hessian_er){
+              all_se = full_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, mode = "opmd",  hessian_er = hessian_er, w_er = w3, w_lam = w2)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              hes_er = sqrt(diag(solve(-all_se$hes_mat)))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda1_se"]] = vc_er[k+3]
+              output$coefficient[["lambda3_se"]] = vc_er[k+5]
+              output$coefficient[["rho_se"]] = vc_er[k+2]
+              output$coefficient[["lambda2_se"]] = vc_er[k+4]
+              output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
+              output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
+              output$coefficient[["lambda1_se_hes"]] = hes_er[k+3]
+              output$coefficient[["lambda3_se_hes"]] = hes_er[k+5]
+              output$coefficient[["rho_se_hes"]] = hes_er[k+2]
+              output$coefficient[["lambda2_se_hes"]] = hes_er[k+4]
+              output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               output$hessian = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
+            }else{
+              all_se = full_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, mode = "opmd",  hessian_er = hessian_er, w_er = w3, w_lam = w2)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda1_se"]] = vc_er[k+3]
+              output$coefficient[["lambda3_se"]] = vc_er[k+5]
+              output$coefficient[["rho_se"]] = vc_er[k+2]
+              output$coefficient[["lambda2_se"]] = vc_er[k+4]
+              output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
             }
           },
           "slm" = {
@@ -193,10 +179,10 @@ msdpd = function(y,
                 pars = numeric(4)
                 pars[1] = par[1]
                 pars[3] = par[2]
-                msdpd_aqs(para = pars, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, w_er = matrix(0,p,p), w_lam = matrix(0,p,p))
+                msdpd_aqs(para = pars, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c,  w_er = matrix(0,p,p), w_lam = matrix(0,p,p))
               }
             }else{
-              objfun_rcma = function(par) {slm_aqs(para = par, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction)}
+              objfun_rcma = function(par) {slm_aqs(para = par, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c)}
             }
             const_rcma_slm = function(x){
               pars = numeric(4)
@@ -216,41 +202,31 @@ msdpd = function(y,
                                       rho = optim_res$bestX[2]
             )
             
-            output$coefficient = c(output$coefficient, slm_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "beta_sigs"))
+            output$coefficient = c(output$coefficient, slm_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, mode = "beta_sigs"))
             output$coefficient$beta = output$coefficient$beta[1:k_o]
             
-            if (correction){
-              if (hessian_er){
-                all_se = slm_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = hessian_er)
-                vc_er = sqrt(diag(all_se$vc_mat))
-                hes_er = sqrt(diag(all_se$hes_er))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda1_se"]] = vc_er[k+3]
-                output$coefficient[["rho_se"]] = vc_er[k+2]
-                output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
-                output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
-                output$coefficient[["lambda1_se_hes"]] = hes_er[k+3]
-                output$coefficient[["rho_se_hes"]] = hes_er[k+2]
-                output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                output$hessian = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
-              }else{
-                all_se = slm_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = hessian_er)
-                vc_er = sqrt(diag(all_se$vc_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda1_se"]] = vc_er[k+3]
-                output$coefficient[["rho_se"]] = vc_er[k+2]
-                output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-              }
-            } else {
-              all_se = slm_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = T)
-              hes_er = sqrt(diag(all_se$hes_mat))
-              output$coefficient[["beta_se"]] = hes_er[1:k_o]
-              output$coefficient[["sigma2_se"]] = hes_er[k+1]
-              output$coefficient[["lambda1_se"]] = hes_er[k+3]
-              output$coefficient[["rho_se"]] = hes_er[k+2]
+            if (hessian_er){
+              all_se = slm_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, mode = "opmd",  hessian_er = hessian_er)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              hes_er = sqrt(diag(solve(-all_se$hes_mat)))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda1_se"]] = vc_er[k+3]
+              output$coefficient[["rho_se"]] = vc_er[k+2]
+              output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
+              output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
+              output$coefficient[["lambda1_se_hes"]] = hes_er[k+3]
+              output$coefficient[["rho_se_hes"]] = hes_er[k+2]
+              output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               output$hessian = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
+            }else{
+              all_se = slm_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, mode = "opmd",  hessian_er = hessian_er)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda1_se"]] = vc_er[k+3]
+              output$coefficient[["rho_se"]] = vc_er[k+2]
+              output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
             }
           },
           "sem" = {
@@ -259,10 +235,10 @@ msdpd = function(y,
                 pars = numeric(4)
                 pars[2] = par[1]
                 pars[3] = par[2]
-                msdpd_aqs(para = pars, y = y, x_ = x, y1 = y_1, inv_c = inv_c, correction = correction, w_er = w3, w = matrix(0,p,p), w_lam = matrix(0,p,p))
+                msdpd_aqs(para = pars, y = y, x_ = x, y1 = y_1, inv_c = inv_c, w_er = w3, w = matrix(0,p,p), w_lam = matrix(0,p,p))
               }
             }else{
-              objfun_rcma = function(par) {sem_aqs(para = par, y = y, x_ = x, y1 = y_1, inv_c = inv_c, correction = correction, w_er = w3)}
+              objfun_rcma = function(par) {sem_aqs(para = par, y = y, x_ = x, y1 = y_1, inv_c = inv_c, w_er = w3)}
             }
             const_rcma_sem = function(x){
               pars = numeric(4)
@@ -281,40 +257,30 @@ msdpd = function(y,
             output$coefficient = list(lambda3 = optim_res$bestX[1],
                                       rho = optim_res$bestX[2]
             )
-            output$coefficient = c(output$coefficient, sem_aqs(para = optim_res$bestX,  y = y, x_ = x, y1 = y_1, inv_c = inv_c, correction = correction, mode = "beta_sigs", w_er = w3))
+            output$coefficient = c(output$coefficient, sem_aqs(para = optim_res$bestX,  y = y, x_ = x, y1 = y_1, inv_c = inv_c, mode = "beta_sigs", w_er = w3))
             output$coefficient$beta = output$coefficient$beta[1:k_o]
-            if (correction){
-              if (hessian_er){
-                all_se = sem_aqs(para = optim_res$bestX,  y = y, x_ = x, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = hessian_er, w_er = w3)
-                vc_er = sqrt(diag(all_se$vc_mat))
-                hes_er = sqrt(diag(all_se$hes_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda3_se"]] = vc_er[k+3]
-                output$coefficient[["rho_se"]] = vc_er[k+2]
-                output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
-                output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
-                output$coefficient[["lambda3_se_hes"]] = hes_er[k+3]
-                output$coefficient[["rho_se_hes"]] = hes_er[k+2]
-                output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                output$hessian = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
-              }else{
-                all_se = sem_aqs(para = optim_res$bestX,  y = y, x_ = x, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = hessian_er, w_er = w3)
-                vc_er = sqrt(diag(all_se$vc_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda3_se"]] = vc_er[k+3]
-                output$coefficient[["rho_se"]] = vc_er[k+2]
-                output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-              }
-            } else {
-              all_se = sem_aqs(para = optim_res$bestX,  y = y, x_ = x, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = T, w_er = w3)
-              hes_er = sqrt(diag(all_se$hes_mat))
-              output$coefficient[["beta_se"]] = hes_er[1:k_o]
-              output$coefficient[["sigma2_se"]] = hes_er[k+1]
-              output$coefficient[["alpha_se"]] = hes_er[k+3]
-              output$coefficient[["rho_se"]] = hes_er[k+2]
+            if (hessian_er){
+              all_se = sem_aqs(para = optim_res$bestX,  y = y, x_ = x, y1 = y_1, inv_c = inv_c, mode = "opmd",  hessian_er = hessian_er, w_er = w3)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              hes_er = sqrt(diag(solve(-all_se$hes_mat)))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda3_se"]] = vc_er[k+3]
+              output$coefficient[["rho_se"]] = vc_er[k+2]
+              output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
+              output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
+              output$coefficient[["lambda3_se_hes"]] = hes_er[k+3]
+              output$coefficient[["rho_se_hes"]] = hes_er[k+2]
+              output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               output$hessian = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
+            }else{
+              all_se = sem_aqs(para = optim_res$bestX,  y = y, x_ = x, y1 = y_1, inv_c = inv_c, mode = "opmd",  hessian_er = hessian_er, w_er = w3)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda3_se"]] = vc_er[k+3]
+              output$coefficient[["rho_se"]] = vc_er[k+2]
+              output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
             }
           },
           "sltl" = {
@@ -324,10 +290,10 @@ msdpd = function(y,
                 pars[1] = par[1]
                 pars[3] = par[2]
                 pars[4] = par[3]
-                msdpd_aqs(para = pars, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, w_lam = w2, w_er = matrix(0,p,p))
+                msdpd_aqs(para = pars, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, w_lam = w2, w_er = matrix(0,p,p))
               }
             }else{
-              objfun_rcma = function(par) {sltl_aqs(para = par, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, w_lam = w2)}
+              objfun_rcma = function(par) {sltl_aqs(para = par, y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, w_lam = w2)}
             }
             const_rcma_sem = function(x){
               pars = numeric(4)
@@ -348,44 +314,33 @@ msdpd = function(y,
                                       rho = optim_res$bestX[2],
                                       lambda2 = optim_res$bestX[3]
             )
-            output$coefficient = c(output$coefficient, sltl_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "beta_sigs", w_lam = w2))
+            output$coefficient = c(output$coefficient, sltl_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, mode = "beta_sigs", w_lam = w2))
             output$coefficient$beta = output$coefficient$beta[1:k_o]
-            if (correction){
-              if (hessian_er){
-                all_se = sltl_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = hessian_er, w_lam = w2)
-                vc_er = sqrt(diag(all_se$vc_mat))
-                hes_er = sqrt(diag(all_se$hes_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda1_se"]] = vc_er[k+3]
-                output$coefficient[["rho_se"]] = vc_er[k+2]
-                output$coefficient[["lambda2_se"]] = vc_er[k+4]
-                output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
-                output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
-                output$coefficient[["lambda1_se_hes"]] = hes_er[k+3]
-                output$coefficient[["rho_se_hes"]] = hes_er[k+2]
-                output$coefficient[["lambda2_se_hes"]] = hes_er[k+4]
-                output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-                output$hessian = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
-              }else{
-                all_se = sltl_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = hessian_er, w_lam = w2)
-                vc_er = sqrt(diag(all_se$vc_mat))
-                output$coefficient[["beta_se"]] = vc_er[1:k_o]
-                output$coefficient[["sigma2_se"]] = vc_er[k+1]
-                output$coefficient[["lambda1_se"]] = vc_er[k+3]
-                output$coefficient[["rho_se"]] = vc_er[k+2]
-                output$coefficient[["lambda2_se"]] = vc_er[k+4]
-                output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
-              }
-            } else {
-              all_se = sltl_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, correction = correction, mode = "opmd",  hessian_er = T, w_lam = w2)
-              hes_er = sqrt(diag(all_se$hes_mat))
-              output$coefficient[["beta_se"]] = hes_er[1:k_o]
-              output$coefficient[["sigma2_se"]] = hes_er[k+1]
-              output$coefficient[["lambda1_se"]] = hes_er[k+3]
-              output$coefficient[["rho_se"]] = hes_er[k+2]
-              output$coefficient[["lambda2_se"]] = hes_er[k+4]
+            if (hessian_er){
+              all_se = sltl_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, mode = "opmd",  hessian_er = hessian_er, w_lam = w2)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              hes_er = sqrt(diag(solve(-all_se$hes_mat)))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda1_se"]] = vc_er[k+3]
+              output$coefficient[["rho_se"]] = vc_er[k+2]
+              output$coefficient[["lambda2_se"]] = vc_er[k+4]
+              output$coefficient[["beta_se_hes"]] = hes_er[1:k_o]
+              output$coefficient[["sigma2_se_hes"]] = hes_er[k+1]
+              output$coefficient[["lambda1_se_hes"]] = hes_er[k+3]
+              output$coefficient[["rho_se_hes"]] = hes_er[k+2]
+              output$coefficient[["lambda2_se_hes"]] = hes_er[k+4]
+              output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
               output$hessian = all_se$hes_mat[-c((k_o+1):k), -c((k_o+1):k)]
+            }else{
+              all_se = sltl_aqs(para = optim_res$bestX,  y = y, x_ = x, w = w1, y1 = y_1, inv_c = inv_c, mode = "opmd",  hessian_er = hessian_er, w_lam = w2)
+              vc_er = sqrt(diag(all_se$vc_mat))
+              output$coefficient[["beta_se"]] = vc_er[1:k_o]
+              output$coefficient[["sigma2_se"]] = vc_er[k+1]
+              output$coefficient[["lambda1_se"]] = vc_er[k+3]
+              output$coefficient[["rho_se"]] = vc_er[k+2]
+              output$coefficient[["lambda2_se"]] = vc_er[k+4]
+              output$vc = all_se$vc_mat[-c((k_o+1):k), -c((k_o+1):k)]
             }
           },
           stop("Undefined model")

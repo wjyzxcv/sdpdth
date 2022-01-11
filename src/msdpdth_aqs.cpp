@@ -52,7 +52,6 @@ Rcpp::RObject msdpd_aqs(const arma::vec& para,
                         const arma::vec& y1, 
                         const arma::mat& w, 
                         const arma::mat& inv_c, 
-                        const bool& correction, 
                         const arma::mat& w_lam, 
                         const arma::mat& w_er){
   const int tp = y.size();
@@ -87,18 +86,11 @@ Rcpp::RObject msdpd_aqs(const arma::vec& para,
   const mat bdw_er = kron(diag_t, w_er);
   const rowvec tmp_mat_1 = k_ast.t()*iaaw;
   vec eq = vec(4);
-  if (correction) {
-    field<mat> A_mats = make_A_df(p, t, theta*eye(p, p), lws, iirws);
-    eq(0) = 1/sigs*as_scalar(tmp_mat_1*y1) + trace(bdinv_c*A_mats(1)*iirw);
-    eq(1) = 1/sigs*as_scalar(tmp_mat_1*bdw*y) + trace(bdinv_c*A_mats(0)*iirw*bdw);
-    eq(2) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam*y1)+ trace(bdinv_c*A_mats(1)*iirw*bdw_lam);
-    eq(3) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er.t()*iaws + iaws.t()*w_er)*k_ast) - t * trace(iiaws*w_er);
-  } else {
-    eq(0) = 1/sigs*as_scalar(tmp_mat_1*y1);
-    eq(1) = 1/sigs*as_scalar(tmp_mat_1*bdw*y) - t * trace(iirws*w);
-    eq(2) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam*y1);
-    eq(3) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er.t()*iaws + iaws.t()*w_er)*k_ast) - t * trace(iiaws*w_er);
-  }
+  field<mat> A_mats = make_A_df(p, t, theta*eye(p, p), lws, iirws);
+  eq(0) = 1/sigs*as_scalar(tmp_mat_1*y1) + trace(bdinv_c*A_mats(1)*iirw);
+  eq(1) = 1/sigs*as_scalar(tmp_mat_1*bdw*y) + trace(bdinv_c*A_mats(0)*iirw*bdw);
+  eq(2) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam*y1)+ trace(bdinv_c*A_mats(1)*iirw*bdw_lam);
+  eq(3) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er.t()*iaws + iaws.t()*w_er)*k_ast) - t * trace(iiaws*w_er);
   return Rcpp::wrap(sum(square(eq)));
 }
 
@@ -112,7 +104,6 @@ Rcpp::RObject msdpdth_aqs(const arma::vec& para,
                           const arma::mat& w_er,
                           const arma::vec& th_e, 
                           const arma::mat& inv_c, 
-                          const bool& correction,
                           const int& th_type){
   const int tp = y.n_elem;
   const int p = w.n_cols;
@@ -199,41 +190,26 @@ Rcpp::RObject msdpdth_aqs(const arma::vec& para,
   const mat iiaw = kron(diag_t, iiaws);
   const mat tmp_mat_1 = k_ast.t()*iaaw;
   vec eq = vec(8);
-  if (correction) {
-    field<mat> A_mats = make_A_df(p, t, dthetas, lws, iirws);
-    // const vec bias_theta = diagvec(bdinv_c*A_mats(1)*iirw);
-    // const vec bias_rho = diagvec(bdinv_c*A_mats(0)*iirw*bdw);
-    // const vec bias_lam = diagvec(bdinv_c*A_mats(1)*iirw*bdw_lam);
-    // const vec diag_alp = diagvec(iiaws*w_er);
-    // eq(0) = 1/sigs*as_scalar(tmp_mat_1*y1_q1) + sum(bias_theta.elem(th_e1));
-    // eq(1) = 1/sigs*as_scalar(tmp_mat_1*bdw_q1*y) + sum(bias_rho.elem(th_e1));
-    // eq(2) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q1*y1)+ sum(bias_lam.elem(th_e1));
-    eq(0) = 1/sigs*as_scalar(tmp_mat_1*y1_q1) + trace(bdinv_c*A_mats(1)*iirw*bdw0_q1);
-    eq(1) = 1/sigs*as_scalar(tmp_mat_1*bdw_q1*y) + trace(bdinv_c*A_mats(0)*iirw*bdw_q1);
-    eq(2) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q1*y1)+ trace(bdinv_c*A_mats(1)*iirw*bdw_lam_q1);
-    // eq(3) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q1.t()*iaws + iaws.t()*w_er_q1)*k_ast) - t * sum(diag_alp.elem(th_1));
-    eq(3) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q1.t()*iaws + iaws.t()*w_er_q1)*k_ast) - t * trace(iiaws*w_er_q1);
-    // eq(4) = 1/sigs*as_scalar(tmp_mat_1*y1_q2) + sum(bias_theta.elem(th_e2));
-    // eq(5) = 1/sigs*as_scalar(tmp_mat_1*bdw_q2*y) + sum(bias_rho.elem(th_e2));
-    // eq(6) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q2*y1)+ sum(bias_lam.elem(th_e2));
-    eq(4) = 1/sigs*as_scalar(tmp_mat_1*y1_q2) + trace(bdinv_c*A_mats(1)*iirw*bdw0_q2);
-    eq(5) = 1/sigs*as_scalar(tmp_mat_1*bdw_q2*y) + trace(bdinv_c*A_mats(0)*iirw*bdw_q2);
-    eq(6) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q2*y1)+ trace(bdinv_c*A_mats(1)*iirw*bdw_lam_q2);
-    // eq(7) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q2.t()*iaws + iaws.t()*w_er_q2)*k_ast) - t * sum(diag_alp.elem(th_2));
-    eq(7) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q2.t()*iaws + iaws.t()*w_er_q2)*k_ast) - t * trace(iiaws*w_er_q2);
-  } else {
-    // const vec diag_rho = diagvec(iirws*w);
-    // const vec diag_alp = diagvec(iiaws*w);
-    eq(0) = 1/sigs*as_scalar(tmp_mat_1*y1_q1);
-    eq(1) = 1/sigs*as_scalar(tmp_mat_1*bdw_q1*y) - t * trace(iirws*w_q1);
-    eq(2) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q1*y1);
-    // eq(3) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q1.t()*iaws + iaws.t()*w_er_q1)*k_ast) - t * sum(diag_alp.elem(th_1));
-    eq(3) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q1.t()*iaws + iaws.t()*w_er_q1)*k_ast) - t * trace(iiaws*w_er_q1);
-    eq(4) = 1/sigs*as_scalar(tmp_mat_1*y1_q2);
-    eq(5) = 1/sigs*as_scalar(tmp_mat_1*bdw_q2*y) - t * trace(iirws*w_q2);
-    eq(6) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q2*y1);
-    // eq(7) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q2.t()*iaws + iaws.t()*w_er_q2)*k_ast) - t * sum(diag_alp.elem(th_2));
-    eq(7) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q2.t()*iaws + iaws.t()*w_er_q2)*k_ast) - t * trace(iiaws*w_er_q2);
-  }
+  field<mat> A_mats = make_A_df(p, t, dthetas, lws, iirws);
+  // const vec bias_theta = diagvec(bdinv_c*A_mats(1)*iirw);
+  // const vec bias_rho = diagvec(bdinv_c*A_mats(0)*iirw*bdw);
+  // const vec bias_lam = diagvec(bdinv_c*A_mats(1)*iirw*bdw_lam);
+  // const vec diag_alp = diagvec(iiaws*w_er);
+  // eq(0) = 1/sigs*as_scalar(tmp_mat_1*y1_q1) + sum(bias_theta.elem(th_e1));
+  // eq(1) = 1/sigs*as_scalar(tmp_mat_1*bdw_q1*y) + sum(bias_rho.elem(th_e1));
+  // eq(2) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q1*y1)+ sum(bias_lam.elem(th_e1));
+  eq(0) = 1/sigs*as_scalar(tmp_mat_1*y1_q1) + trace(bdinv_c*A_mats(1)*iirw*bdw0_q1);
+  eq(1) = 1/sigs*as_scalar(tmp_mat_1*bdw_q1*y) + trace(bdinv_c*A_mats(0)*iirw*bdw_q1);
+  eq(2) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q1*y1)+ trace(bdinv_c*A_mats(1)*iirw*bdw_lam_q1);
+  // eq(3) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q1.t()*iaws + iaws.t()*w_er_q1)*k_ast) - t * sum(diag_alp.elem(th_1));
+  eq(3) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q1.t()*iaws + iaws.t()*w_er_q1)*k_ast) - t * trace(iiaws*w_er_q1);
+  // eq(4) = 1/sigs*as_scalar(tmp_mat_1*y1_q2) + sum(bias_theta.elem(th_e2));
+  // eq(5) = 1/sigs*as_scalar(tmp_mat_1*bdw_q2*y) + sum(bias_rho.elem(th_e2));
+  // eq(6) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q2*y1)+ sum(bias_lam.elem(th_e2));
+  eq(4) = 1/sigs*as_scalar(tmp_mat_1*y1_q2) + trace(bdinv_c*A_mats(1)*iirw*bdw0_q2);
+  eq(5) = 1/sigs*as_scalar(tmp_mat_1*bdw_q2*y) + trace(bdinv_c*A_mats(0)*iirw*bdw_q2);
+  eq(6) = 1/sigs*as_scalar(tmp_mat_1*bdw_lam_q2*y1)+ trace(bdinv_c*A_mats(1)*iirw*bdw_lam_q2);
+  // eq(7) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q2.t()*iaws + iaws.t()*w_er_q2)*k_ast) - t * sum(diag_alp.elem(th_2));
+  eq(7) = 0.5/sigs*as_scalar(k_ast.t()*kron(inv_c, w_er_q2.t()*iaws + iaws.t()*w_er_q2)*k_ast) - t * trace(iiaws*w_er_q2);
   return Rcpp::wrap(sum(square(eq)));
 }

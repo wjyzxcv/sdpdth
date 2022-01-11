@@ -8,7 +8,6 @@ msdpd(
   y,
   x,
   w1,
-  correction = TRUE,
   hessian_er = FALSE,
   true_range = FALSE,
   max_try = 5,
@@ -27,9 +26,7 @@ msdpd(
 
 \item{w1}{matrix, the spatial weight matrix. If w2 and w3 are supplied, the spatial weight matrix for spatial lag.}
 
-\item{correction}{logical, whether to use adjusted score function. Default value is TRUE.}
-
-\item{hessian_er}{logical, whether to output hessian based se. Ignored if correction is set to False. Default value is FALSE.}
+\item{hessian_er}{logical, whether to output hessian based se. Default value is FALSE.}
 
 \item{true_range}{logical, whether to used the accurate stationary check. Default value is FALSE due to performance reasons.}
 

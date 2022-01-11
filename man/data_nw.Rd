@@ -5,7 +5,7 @@
 \alias{data_nw}
 \title{A simulated data set for testing}
 \format{
-An object of class \code{matrix} with 12 rows and 12 columns.
+An object of class \code{matrix} (inherits from \code{array}) with 12 rows and 12 columns.
 }
 \usage{
 data_nw

@@ -6,9 +6,14 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // msdpd_aqs
-Rcpp::RObject msdpd_aqs(const arma::vec& para, const arma::mat& x_, const arma::vec& y, const arma::vec& y1, const arma::mat& w, const arma::mat& inv_c, const bool& correction, const arma::mat& w_lam, const arma::mat& w_er);
-RcppExport SEXP _sdpdth_msdpd_aqs(SEXP paraSEXP, SEXP x_SEXP, SEXP ySEXP, SEXP y1SEXP, SEXP wSEXP, SEXP inv_cSEXP, SEXP correctionSEXP, SEXP w_lamSEXP, SEXP w_erSEXP) {
+Rcpp::RObject msdpd_aqs(const arma::vec& para, const arma::mat& x_, const arma::vec& y, const arma::vec& y1, const arma::mat& w, const arma::mat& inv_c, const arma::mat& w_lam, const arma::mat& w_er);
+RcppExport SEXP _sdpdth_msdpd_aqs(SEXP paraSEXP, SEXP x_SEXP, SEXP ySEXP, SEXP y1SEXP, SEXP wSEXP, SEXP inv_cSEXP, SEXP w_lamSEXP, SEXP w_erSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -18,16 +23,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type y1(y1SEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type w(wSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type inv_c(inv_cSEXP);
-    Rcpp::traits::input_parameter< const bool& >::type correction(correctionSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type w_lam(w_lamSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type w_er(w_erSEXP);
-    rcpp_result_gen = Rcpp::wrap(msdpd_aqs(para, x_, y, y1, w, inv_c, correction, w_lam, w_er));
+    rcpp_result_gen = Rcpp::wrap(msdpd_aqs(para, x_, y, y1, w, inv_c, w_lam, w_er));
     return rcpp_result_gen;
 END_RCPP
 }
 // msdpdth_aqs
-Rcpp::RObject msdpdth_aqs(const arma::vec& para, const arma::mat& x_, const arma::vec& y, const arma::vec& y1, const arma::mat& w, const arma::mat& w_lam, const arma::mat& w_er, const arma::vec& th_e, const arma::mat& inv_c, const bool& correction, const int& th_type);
-RcppExport SEXP _sdpdth_msdpdth_aqs(SEXP paraSEXP, SEXP x_SEXP, SEXP ySEXP, SEXP y1SEXP, SEXP wSEXP, SEXP w_lamSEXP, SEXP w_erSEXP, SEXP th_eSEXP, SEXP inv_cSEXP, SEXP correctionSEXP, SEXP th_typeSEXP) {
+Rcpp::RObject msdpdth_aqs(const arma::vec& para, const arma::mat& x_, const arma::vec& y, const arma::vec& y1, const arma::mat& w, const arma::mat& w_lam, const arma::mat& w_er, const arma::vec& th_e, const arma::mat& inv_c, const int& th_type);
+RcppExport SEXP _sdpdth_msdpdth_aqs(SEXP paraSEXP, SEXP x_SEXP, SEXP ySEXP, SEXP y1SEXP, SEXP wSEXP, SEXP w_lamSEXP, SEXP w_erSEXP, SEXP th_eSEXP, SEXP inv_cSEXP, SEXP th_typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -40,16 +44,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type w_er(w_erSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type th_e(th_eSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type inv_c(inv_cSEXP);
-    Rcpp::traits::input_parameter< const bool& >::type correction(correctionSEXP);
     Rcpp::traits::input_parameter< const int& >::type th_type(th_typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(msdpdth_aqs(para, x_, y, y1, w, w_lam, w_er, th_e, inv_c, correction, th_type));
+    rcpp_result_gen = Rcpp::wrap(msdpdth_aqs(para, x_, y, y1, w, w_lam, w_er, th_e, inv_c, th_type));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_sdpdth_msdpd_aqs", (DL_FUNC) &_sdpdth_msdpd_aqs, 9},
-    {"_sdpdth_msdpdth_aqs", (DL_FUNC) &_sdpdth_msdpdth_aqs, 11},
+    {"_sdpdth_msdpd_aqs", (DL_FUNC) &_sdpdth_msdpd_aqs, 8},
+    {"_sdpdth_msdpdth_aqs", (DL_FUNC) &_sdpdth_msdpdth_aqs, 10},
     {NULL, NULL, 0}
 };
 

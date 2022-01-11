@@ -9,7 +9,6 @@ msdpdth(
   x,
   w1,
   th,
-  correction = TRUE,
   max_try = 5,
   all_er = FALSE,
   true_range = FALSE,
@@ -33,11 +32,9 @@ msdpdth(
 
 \item{th}{data.frame, containing regional index (first column, numeric) and grouping indicator(second column, logical). The number of rows should be the same as the number of regions.}
 
-\item{correction}{logical, whether to use adjusted score function. Default value is TRUE.}
-
 \item{max_try}{integer, maximum attempt for the solver. Default value is 5.}
 
-\item{all_er}{logical, whether to output Hessian and Gamma matrix based se. Ignored if correction is set to FALSE. Default value is FALSE.}
+\item{all_er}{logical, whether to output Hessian and Gamma matrix based se. Default value is FALSE.}
 
 \item{true_range}{logical, whether to used the accurate stationary check. Default value is FALSE due to performance reasons.}
 
