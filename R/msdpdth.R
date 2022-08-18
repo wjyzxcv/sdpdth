@@ -138,61 +138,61 @@ msdpdth = function(y,
     k = dim(x_mt)[2]
     k_o = dim(x_mt)[2] - dim(tif)[2]
   }
+  if (true_range){
+    const_rcma_t = function(para, w, th, t, w_er, w_lam, th_type){
+      rho1 = para[1]
+      alp1 = para[2]
+      theta1 = para[3]
+      lam1 = para[4]
+      rho2 = para[5]
+      alp2 = para[6]
+      theta2 = para[7]
+      lam2 = para[8]
+      p = dim(w)[1]
+      switch (th_type,
+              "row" = {
+                iaws = diag(p) - merge_th_diag(alp1, alp2, th) %*% w_er
+                irws = diag(p) - merge_th_diag(rho1, rho2, th) %*% w
+                lws = merge_th_diag(lam1, lam2, th) %*% w_lam
+              },
+              "col" = {
+                iaws = diag(p) - w_er %*% merge_th_diag(alp1, alp2, th)
+                irws = diag(p) - w %*% merge_th_diag(rho1, rho2, th)
+                lws = w_lam %*% merge_th_diag(lam1, lam2, th)
+              }
+      )
+      iirws = solve(irws)
+      dthetas = merge_th_diag(theta1, theta2, th)
+      if (is.singular.matrix(iaws)| norm((dthetas + lws)%*%iirws) >= 1){
+        return(F)
+      } else{
+        return(T)
+      }
+    }
+    const_rcma = function(x) {const_rcma_t(para = x, w = w1, t = t1, th = th, w_er = w3, w_lam = w2, th_type = th_type)}
+  } else {
+    alp_lbound = min(Re(eigen(w3)$values[abs(Im(eigen(w3)$values)) < 1e-6]))
+    const_rcma_nt = function(para, alp_lbound){
+      rho1 = para[1]
+      alp1 = para[2]
+      theta1 = para[3]
+      lam1 = para[4]
+      rho2 = para[5]
+      alp2 = para[6]
+      theta2 = para[7]
+      lam2 = para[8]
+      if (alp1 >= 1| alp1 <= 1/alp_lbound| alp2 >= 1| alp2 <= 1/alp_lbound| abs(theta1) + abs(rho1) + abs(lam1) >= 1|abs(theta2) + abs(rho2) + abs(lam2) >= 1){
+        return(F)
+      } else{
+        return(T)
+      }
+    }
+    const_rcma = function(x) {const_rcma_nt(para = x, alp_lbound = alp_lbound)}
+  }
   switch (model,
           "full" = {
             init_value = rep(c(nth_res$coefficient$lambda1, nth_res$coefficient$lambda3, nth_res$coefficient$rho, nth_res$coefficient$lambda2), 2)
             "rCMA" = {
-              if (true_range){
-                const_rcma_t = function(para, w, th, t, w_er, w_lam, th_type){
-                  rho1 = para[1]
-                  alp1 = para[2]
-                  theta1 = para[3]
-                  lam1 = para[4]
-                  rho2 = para[5]
-                  alp2 = para[6]
-                  theta2 = para[7]
-                  lam2 = para[8]
-                  p = dim(w)[1]
-                  switch (th_type,
-                          "row" = {
-                            iaws = diag(p) - merge_th_diag(alp1, alp2, th) %*% w_er
-                            irws = diag(p) - merge_th_diag(rho1, rho2, th) %*% w
-                            lws = merge_th_diag(lam1, lam2, th) %*% w_lam
-                          },
-                          "col" = {
-                            iaws = diag(p) - w_er %*% merge_th_diag(alp1, alp2, th)
-                            irws = diag(p) - w %*% merge_th_diag(rho1, rho2, th)
-                            lws = w_lam %*% merge_th_diag(lam1, lam2, th)
-                          }
-                  )
-                  iirws = solve(irws)
-                  dthetas = merge_th_diag(theta1, theta2, th)
-                  if (is.singular.matrix(iaws)| norm((dthetas + lws)%*%iirws) >= 1){
-                    return(F)
-                  } else{
-                    return(T)
-                  }
-                }
-                const_rcma = function(x) {const_rcma_t(para = x, w = w1, t = t1, th = th, w_er = w3, w_lam = w2, th_type = th_type)}
-              } else {
-                alp_lbound = min(Re(eigen(w3)$values[abs(Im(eigen(w3)$values)) < 1e-6]))
-                const_rcma_nt = function(para, alp_lbound){
-                  rho1 = para[1]
-                  alp1 = para[2]
-                  theta1 = para[3]
-                  lam1 = para[4]
-                  rho2 = para[5]
-                  alp2 = para[6]
-                  theta2 = para[7]
-                  lam2 = para[8]
-                  if (alp1 >= 1| alp1 <= 1/alp_lbound| alp2 >= 1| alp2 <= 1/alp_lbound| abs(theta1) + abs(rho1) + abs(lam1) >= 1|abs(theta2) + abs(rho2) + abs(lam2) >= 1){
-                    return(F)
-                  } else{
-                    return(T)
-                  }
-                }
-                const_rcma = function(x) {const_rcma_nt(para = x, alp_lbound = alp_lbound)}
-              }
               if(rcpp){
                 int_th_type = as.integer(ifelse(th_type == "row", 1, 2))
                 objfun_rcma = function(par) {msdpdth_aqs(para = par, y = y, x_ = x_mt, w = w1, th_e = rep(th, t1)+0, y1 = y_1, inv_c = inv_c, w_er = w3, w_lam = w2, th_type = int_th_type)}
