@@ -90,7 +90,7 @@ msdpdth = function(y,
       if (i == max_try) message("Failed to solve non-threshold model")
     }
   } else {
-    if (class(ini_val)=="msdpd"){
+    if (inherits(ini_val, "msdpd")){
       if (ini_val$model == model){
         nth_res = ini_val
       } else {
